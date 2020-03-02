@@ -13,6 +13,8 @@ services:
   ros2_console_service:
     container_name: ros2_console
     image: ros:eloquent
+    volumes:
+      - ../content:/content
     command: ["tail", "-f", "/dev/null"]
     networks:
       - rosdroid_network
