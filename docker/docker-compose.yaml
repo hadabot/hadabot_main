@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  portainer_service:
+    image: portainer/portainer:1.22.2
+    restart: always
+    ports:
+      - 9000:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - rosdroid_network
+  ros2_console_service:
+    container_name: ros2_console
+    image: ros:eloquent
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - rosdroid_network
+
+networks:
+  rosdroid_network:
