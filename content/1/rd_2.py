@@ -1,6 +1,6 @@
 def main(argv=None):
     print("""
-1. Type the following, ** one line at a time **, into the bash terminal:
+1. Type the following, ** one line at a time **, into the web-bash terminal:
 
      source /opt/ros/eloquent/setup.bash
 
