@@ -1,5 +1,8 @@
+from shared.utils import CONTENT_FOLDER_PREFIX, FOOTER
+
+
 def main(argv=None):
-    print("""
+    print(f"""
 First read these instructions. Then do it!
 
 1. Click on, then copy via Ctrl-C the URL location of this webpage (ie 'https://localhost:9000/#/containers/<<ROS2_CONSOLE_CONTAINER_ID>>/exec')
@@ -12,20 +15,17 @@ First read these instructions. Then do it!
 
      source /opt/ros/eloquent/setup.bash
 
-     ros2 topic pub /chatter std_msgs/String '{data: "ROSdroid GO!"}'
+     ros2 topic pub /chatter std_msgs/String '{{data: "ROSdroid GO!"}}'
 
    You should see messages being outputted.
 
 5. In the web-bash terminal tab #2 you opened from steps 1-3, type:
 
-     python3 /content/1/rd_2.py
+     python3 {CONTENT_FOLDER_PREFIX}1/rd_2.py
 
    Follow the instructions outputted.
 
-----
-
-* Read the ROSdroid blog - blog.rosdroid.com - to understand what you are doing.
-
+{FOOTER}
 """)
 
 

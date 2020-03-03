@@ -1,5 +1,8 @@
+from shared.utils import FOOTER
+
+
 def main(argv=None):
-    print("""
+    print(f"""
 1. Type the following, ** one line at a time **, into the web-bash terminal:
 
      source /opt/ros/eloquent/setup.bash
@@ -8,11 +11,11 @@ def main(argv=None):
 
   You should see the message from the terminal #1 being outputted.
 
+  Ctrl-C to exit out.
+
 Congrats, you have started your journey to ROS2 mastery!
 
-----
-
-* Read the ROSdroid blog - blog.rosdroid.com - to understand what you are doing.
+{FOOTER}
 """)
 
 

@@ -14,7 +14,7 @@
    1. 'docker ps --no-trunc -f name=ros2_console -q'
 1. Open a new browser tab to launch a web-bash terminal via http://localhost:9000/#/containers/<ROS2_CONSOLE_CID>/exec - replace ROS2_CONSOLE_CID with the 'full container ID' you discovered above.
    1. Click 'Connect'
-1. (ALTERNATE METHOD TO LAUNCH WEB-BASH) From your Portainer Dashboard:
+1. (If you keep getting redirected to the dashboard use this ALTERNATE METHOD TO LAUNCH WEB-BASH) From your Portainer Dashboard:
    1. From the left-menu bar, click 'Containers'
    1. Click 'ros2_console' from the list of containers
    1. At the bottom of 'Container status' panel box, click '>_ Console'
