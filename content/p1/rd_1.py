@@ -15,7 +15,7 @@ First read these instructions. Then do it!
 
      source /opt/ros/eloquent/setup.bash
 
-     ros2 topic pub /chatter std_msgs/String '{{data: "ROSdroid GO!"}}'
+     ros2 topic pub /chatter std_msgs/String '{{data: "Hadabot GO!"}}'
 
    You should see messages being outputted.
 

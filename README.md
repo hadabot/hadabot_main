@@ -22,4 +22,4 @@
    
 You now have a web-bash terminal into one of the Docker containers we launched (via 'docker-compose up -d') to start learning ROS2. 
 
-If you are reading one of the https://blog.rosdroid.com blog posts, you can use this web-bash to follow along with the instructions described in the blog post.
+If you are reading one of the https://blog.hadabot.com blog posts, you can use this web-bash to follow along with the instructions described in the blog post.
