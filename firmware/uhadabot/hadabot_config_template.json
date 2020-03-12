@@ -1,0 +1,7 @@
+{
+  "ros2_web_bridge_ip_addr": "XXXXX",
+  "network": {
+    "ssid": "XXXXX",
+    "password": "XXXXX"
+  }
+}
