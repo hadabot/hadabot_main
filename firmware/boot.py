@@ -3,6 +3,7 @@
 # This file is executed on every boot (including wake-boot from deepsleep)
 # import esp
 # esp.osdebug(None)
+import machine
 import webrepl
 import json
 import os
@@ -23,7 +24,6 @@ def do_install_requirements():
 
 ###############################################################################
 def do_start_network():
-    import machine
     import network
     sta_if = network.WLAN(network.STA_IF)
 
@@ -80,7 +80,33 @@ def do_setup():
 
 
 ###############################################################################
+def do_initial_prep():
+    # Turn off core LED
+    led_pin = machine.Pin(2, machine.Pin.OUT)
+    led_pin.off()
+
+    # Need to move some files over to root directory
+    core_files = ["webrepl_cfg.py", CONFIG_FILE, "main.py"]
+    need_reset = False
+
+    for core_file in core_files:
+        if core_file not in os.listdir():
+            if core_file not in os.listdir("uhadabot"):
+                raise Exception(
+                    "Could not find {} in /uhadabot folder".format(core_file))
+
+            # Move the file from libary folder out to root
+            os.rename(
+                "/uhadabot/{}".format(core_file), "/{}".format(core_file))
+            need_reset = True
+
+    if need_reset:
+        machine.reset()
+
+
+###############################################################################
 # Initial boot calls
+do_initial_prep()
 do_read_config()
 do_start_network()
 do_install_requirements()

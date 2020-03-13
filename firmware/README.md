@@ -19,13 +19,13 @@
 	    1. If you are using virtualenv, you may need to reactivate the virtualenv to be able to "see" ampy script.
 1. Inside the firmware folder - `cd hadabot_main/firmware`
     1. Setup the ESP32 configurations from a template:
-        1. `cp uhadabot/hadabot_config_template.json ./hb.json`
-		1. Open ./hb.json and edit the network SSID and PWD configurations
+	    1. `cd uhadabot`
+			1. `cp ./hadabot_config_template.json ./hb.json`
+			1. Open ./hb.json and edit the network SSID and PWD configurations
+			1. Set the _ros2\_web\_bridge\_ip\_addr_ to the IP address of the host machine on which you started our Hadabot _docker-compose up -d_ docker stack (likely the machine you are working on right now).
     1. Upload the Hadabot firmware code to the ESP32
         1. (OPTIONAL - To clean the existing code first)
 	        1. `ampy --port /dev/tty.<ESP32_USB_PORT> rmdir uhadabot`
-        1. `ampy --port /dev/tty.<ESP32_USB_PORT> put webrepl_cfg.py`
-        1. `ampy --port /dev/tty.<ESP32_USB_PORT> put hb.json`
         1. `ampy --port /dev/tty.<ESP32_USB_PORT> put boot.py`
         1. `ampy --port /dev/tty.<ESP32_USB_PORT> put uhadabot`
 	1. Reset the board
@@ -68,8 +68,11 @@ For Windows
 In the REPL:
 
 `>>> import machine`
+
 `>>> pin = machine.Pin(2, machine.Pin.OUT)`
+
 `>>> pin.on()`
+
 `>>> pin.off()`
 
 For modules and function definitions, [refer to the entire Micropython library spec](https://docs.micropython.org/en/latest/library/index.html).
