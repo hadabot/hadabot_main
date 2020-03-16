@@ -24,12 +24,13 @@
 			1. Open ./hb.json and edit the network SSID and PWD configurations
 			1. Set the _ros2\_web\_bridge\_ip\_addr_ to the IP address of the host machine on which you started our Hadabot _docker-compose up -d_ docker stack (likely the machine you are working on right now).
     1. Upload the Hadabot firmware code to the ESP32
+	    1. `cd ..` to go back to _hadabot\_main/firmware_
         1. (OPTIONAL - To clean the existing code first)
 	        1. `ampy --port /dev/tty.<ESP32_USB_PORT> rmdir uhadabot`
-        1. `ampy --port /dev/tty.<ESP32_USB_PORT> put boot.py`
         1. `ampy --port /dev/tty.<ESP32_USB_PORT> put uhadabot`
-	1. Reset the board
-	    1. `ampy --port /dev/tty.<ESP32_USB_PORT> reset`
+        1. `ampy --port /dev/tty.<ESP32_USB_PORT> put boot.py`
+	1. Reset the board by pressing the "EN" button for a sec and releasing it.
+	    1. (OPTIONAL - but not as reliable as pushing "EN") `ampy --port /dev/tty.<ESP32_USB_PORT> reset`
 		    1. Onboard LED will blink while setting up the network, and stay lit when network is established.
 		
 ## To See the WebREPL

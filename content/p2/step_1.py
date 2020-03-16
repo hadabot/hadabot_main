@@ -16,7 +16,7 @@ You will only need one (1) web-bash terminal for this example.
 
      source /opt/ros/eloquent/setup.bash
 
-     ros2 topic echo /base_controller/command
+     ros2 topic echo /hadabot/cmd_vel
 
 3. Switch back to the "ROS2 - Teleop" browser window.
 
