@@ -12,7 +12,9 @@ You will only need one (1) web-bash terminal for this example. You should have a
 
      https://www.hadabot.com/tools/teleop.html
 
-2. Let's see the ESP32 respond to a ROS2 message being published. In the teleop.html browser window, click any of the buttons. Each time you click and release, you should see the built-in LED on the ESP32 board flash.
+   The status panel indicate that it's connected to your local ROS2.
+
+2. Let's see the ESP32 respond to a ROS2 message being published. In the teleop.html browser window, click any of the buttons. Each time you click and release, you should see the ESP32's on-board LED flash.
 
 3. Our ESP32 can also publish ROS2 messages. In this web-bash terminal, type the following, ** one line at a time **:
 
@@ -20,7 +22,7 @@ You will only need one (1) web-bash terminal for this example. You should have a
 
      ros2 topic echo /hadabot/log/info
 
-   You should see a heartbeat message from the Hadabot every couple of seconds.
+   You should see a heartbeat message from the Hadabot every 10 seconds or so.
 
 {FOOTER}
 ############################################################
