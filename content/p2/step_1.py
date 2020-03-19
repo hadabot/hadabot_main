@@ -1,4 +1,4 @@
-from shared.utils import CONTENT_FOLDER_PREFIX, FOOTER
+from shared.utils import FOOTER
 
 
 def main(argv=None):
