@@ -47,9 +47,7 @@ def do_start_network():
             led_pin.off()
             time.sleep(0.5)
             pass
-    ifconfig = sta_if.ifconfig()
-    print('Network connected. Config: ', ifconfig)
-    CONFIG["network"]["hadabot_ip_address"] = ifconfig[0]
+    print('Network connected. Config: ', sta_if.ifconfig())
     led_pin.on()
 
 

@@ -1,6 +1,6 @@
 from uhadabot.uroslibpy import Ros, Topic, Message
 from boot import CONFIG
-from machine import Pin, PWM
+from machine import Pin
 import time
 import logging
 
@@ -8,39 +8,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 BUILTIN_LED = 2
-
-
-M_LEFT_PWM = 12
-M_RIGHT_PWM = 14
-M_LEFT_FR = 13
-M_RIGHT_FR = 15
-
-M_LEFT_PWM_PIN = None
-M_RIGHT_PWM_PIN = None
-M_LEFT_FR_PIN = None
-M_RIGHT_FR_PIN = None
-
-
-###############################################################################
-def turn_wheel(wheel_power_f32, pwm_pin, fr_pin):
-    factor = max(min(wheel_power_f32, 1.0), -1.0)
-
-    if factor >= 0:
-        fr_pin.off()
-        pwm_pin.duty(int(1023 * factor))
-    else:
-        fr_pin.on()
-        pwm_pin.duty(1023 - int(1023 * (-1*factor)))
-
-
-###############################################################################
-def right_wheel_cb(wheel_power_f32):
-    turn_wheel(wheel_power_f32, M_RIGHT_PWM_PIN, M_RIGHT_FR_PIN)
-
-
-###############################################################################
-def left_wheel_cb(wheel_power_f32):
-    turn_wheel(wheel_power_f32, M_LEFT_PWM_PIN, M_LEFT_FR_PIN)
 
 
 ###############################################################################
@@ -69,24 +36,8 @@ def twist_cmd_cb(twist_msg):
 
 ###############################################################################
 def main(argv):
-    global M_LEFT_PWM_PIN
-    global M_RIGHT_PWM_PIN
-    global M_LEFT_FR_PIN
-    global M_RIGHT_FR_PIN
-    M_LEFT_PWM_PIN = PWM(Pin(M_LEFT_PWM))
-    M_RIGHT_PWM_PIN = PWM(Pin(M_RIGHT_PWM))
-
-    M_LEFT_FR_PIN = Pin(M_LEFT_FR, Pin.OUT)
-    M_RIGHT_FR_PIN = Pin(M_RIGHT_FR, Pin.OUT)
-
-    M_LEFT_PWM_PIN.duty(0)
-    M_RIGHT_PWM_PIN.duty(0)
-    M_LEFT_FR_PIN.off()
-    M_RIGHT_FR_PIN.off()
-
     ros = None
     try:
-        hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
         boot_button = Pin(0, Pin.IN)
         builtin_led = Pin(BUILTIN_LED, Pin.OUT)
 
@@ -104,7 +55,7 @@ def main(argv):
 
             if (cnt % 1000) == 0:
                 log_info.publish(Message(
-                    "Hadabot heartbeat - IP {}".format(hadabot_ip_address)))
+                    "Hadabot heartbeat {}".format(cnt * 0.001)))
 
             cnt += 1
             time.sleep(0.01)
