@@ -26,9 +26,11 @@ def turn_wheel(wheel_power_f32, pwm_pin, fr_pin):
     factor = max(min(wheel_power_f32, 1.0), -1.0)
 
     if factor >= 0:
+        # FR pin lo to go forward
         fr_pin.off()
         pwm_pin.duty(int(1023 * factor))
     else:
+        # FR pin hi and 'reverse' pwm to go backwards
         fr_pin.on()
         pwm_pin.duty(1023 - int(1023 * (-1*factor)))
 
@@ -68,7 +70,7 @@ def twist_cmd_cb(twist_msg):
 
 
 ###############################################################################
-def main(argv):
+def setup_motor_pins():
     global M_LEFT_PWM_PIN
     global M_RIGHT_PWM_PIN
     global M_LEFT_FR_PIN
@@ -84,21 +86,37 @@ def main(argv):
     M_LEFT_FR_PIN.off()
     M_RIGHT_FR_PIN.off()
 
+
+###############################################################################
+def main(argv):
     ros = None
+
+    setup_motor_pins()
+
     try:
         hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
         boot_button = Pin(0, Pin.IN)
         builtin_led = Pin(BUILTIN_LED, Pin.OUT)
 
         ros = Ros(CONFIG["ros2_web_bridge_ip_addr"])
-        log_info = Topic(ros, "/hadabot/log/info", "std_msgs/String")
 
-        twist_cmd = Topic(ros, "/hadabot/cmd_vel", "geometry_msgs/Twist")
+        # Publish out log info
+        log_info = Topic(ros, "hadabot/log/info", "std_msgs/String")
+
+        # Subscribe to twist topics
+        twist_cmd = Topic(ros, "hadabot/cmd_vel", "geometry_msgs/Twist")
         twist_cmd.subscribe(twist_cmd_cb)
 
-        cnt = 0
+        # Subscribe to wheel turn callbacks
+        rw_sub_topic = Topic(
+            ros, "hadabot/wheel_power_right", "std_msgs/Float32")
+        rw_sub_topic.subscribe(right_wheel_cb)
+        lw_sub_topic = Topic(
+            ros, "hadabot/wheel_power_left", "std_msgs/Float32")
+        lw_sub_topic.subscribe(left_wheel_cb)
 
         # Loop forever
+        cnt = 0
         while(boot_button.value() == 1):
             ros.run_once()
 
