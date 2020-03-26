@@ -36,13 +36,13 @@ def turn_wheel(wheel_power_f32, pwm_pin, fr_pin):
 
 
 ###############################################################################
-def right_wheel_cb(wheel_power_f32):
-    turn_wheel(wheel_power_f32, M_RIGHT_PWM_PIN, M_RIGHT_FR_PIN)
+def right_wheel_cb(wheel_power):
+    turn_wheel(wheel_power["data"], M_RIGHT_PWM_PIN, M_RIGHT_FR_PIN)
 
 
 ###############################################################################
-def left_wheel_cb(wheel_power_f32):
-    turn_wheel(wheel_power_f32, M_LEFT_PWM_PIN, M_LEFT_FR_PIN)
+def left_wheel_cb(wheel_power):
+    turn_wheel(wheel_power["data"], M_LEFT_PWM_PIN, M_LEFT_FR_PIN)
 
 
 ###############################################################################
