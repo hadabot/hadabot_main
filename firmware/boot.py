@@ -89,10 +89,15 @@ def do_initial_prep():
 
     # Need to move some files over to root directory
     core_files = ["webrepl_cfg.py", CONFIG_FILE, "main.py"]
+    need_copy = False
     need_reset = False
 
     for core_file in core_files:
         if core_file not in os.listdir():
+            need_copy = True
+
+    if need_copy:
+        for core_file in core_files:
             if core_file not in os.listdir("uhadabot"):
                 raise Exception(
                     "Could not find {} in /uhadabot folder".format(core_file))
