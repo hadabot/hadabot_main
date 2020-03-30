@@ -92,19 +92,35 @@ def do_initial_prep():
     need_copy = False
     need_reset = False
 
+    # If any of the files don't exist on the ESP32's root level then we need
+    # to update the firmware from uhadabot directory
     for core_file in core_files:
         if core_file not in os.listdir():
+            print("Need to move {} to root folder".format(core_file))
             need_copy = True
+
+    # If all of the core files exist in the uhadabot directory then we
+    # also need to copy them over - not it's all-or-no-copy
+    ls_uhadabot = os.listdir("uhadabot")
+    if all([(core_file in ls_uhadabot) for core_file in core_files]):
+        print(
+            "All core files in uhadabot, so we will update the entire folder")
+        need_copy = True
 
     if need_copy:
         for core_file in core_files:
-            if core_file not in os.listdir("uhadabot"):
+            if core_file not in ls_uhadabot and \
+               core_file not in os.listdir():
                 raise Exception(
-                    "Could not find {} in /uhadabot folder".format(core_file))
+                    "Could not find {} in / or /uhadabot folders".format(
+                        core_file))
 
-            # Move the file from libary folder out to root
-            os.rename(
-                "/uhadabot/{}".format(core_file), "/{}".format(core_file))
+            if core_file in ls_uhadabot:
+                # Move the file from libary folder out to root
+                print(
+                    "Moving {} from uhadabot to root".format(core_file))
+                os.rename(
+                    "/uhadabot/{}".format(core_file), "/{}".format(core_file))
             need_reset = True
 
     if need_reset:
