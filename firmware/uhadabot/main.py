@@ -20,6 +20,44 @@ M_RIGHT_PWM_PIN = None
 M_LEFT_FR_PIN = None
 M_RIGHT_FR_PIN = None
 
+DEBOUNCE_MS = 2000
+debounce_left = 0
+debounce_right = 0
+EN_LEFT = 16
+EN_RIGHT = 17
+en_count_left = 0
+en_count_right = 0
+
+
+###############################################################################
+def encoder_handler_left(pin):
+    global en_count_left
+    global debounce_left
+
+    # N microseconds since last interrupt
+    m = time.ticks_us()
+    if (m - debounce_left) > DEBOUNCE_MS:
+        en_count_left += 1
+
+    # We assume real signal is less than debounce ms
+    # so always update the last bounce time
+    debounce_left = m
+
+
+###############################################################################
+def encoder_handler_right(pin):
+    global en_count_right
+    global debounce_right
+
+    # N microseconds since last interrupt
+    m = time.ticks_us()
+    if (m - debounce_right) > DEBOUNCE_MS:
+        en_count_right += 1
+
+    # We assume real signal is less than debounce ms
+    # so always update the last bounce time
+    debounce_right = m
+
 
 ###############################################################################
 def turn_wheel(wheel_power_f32, pwm_pin, fr_pin):
@@ -70,11 +108,13 @@ def twist_cmd_cb(twist_msg):
 
 
 ###############################################################################
-def setup_motor_pins():
+def setup_pins():
     global M_LEFT_PWM_PIN
     global M_RIGHT_PWM_PIN
     global M_LEFT_FR_PIN
     global M_RIGHT_FR_PIN
+
+    # Motor pings
     M_LEFT_PWM_PIN = PWM(Pin(M_LEFT_PWM))
     M_RIGHT_PWM_PIN = PWM(Pin(M_RIGHT_PWM))
 
@@ -86,12 +126,23 @@ def setup_motor_pins():
     M_LEFT_FR_PIN.off()
     M_RIGHT_FR_PIN.off()
 
+    # Encoder interrupts
+    en_pin_left = Pin(EN_LEFT, Pin.IN)
+    en_pin_right = Pin(EN_RIGHT, Pin.IN)
+
+    en_pin_left.irq(trigger=(Pin.IRQ_FALLING | Pin.IRQ_RISING),
+                    handler=encoder_handler_left)
+    en_pin_right.irq(trigger=(Pin.IRQ_FALLING | Pin.IRQ_RISING),
+                     handler=encoder_handler_right)
+
 
 ###############################################################################
+
+
 def main(argv):
     ros = None
 
-    setup_motor_pins()
+    setup_pins()
 
     try:
         hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
@@ -121,6 +172,8 @@ def main(argv):
             ros.run_once()
 
             if (cnt % 1000) == 0:
+                # logger.info("Encoder left - {}".format(en_count_left))
+                # logger.info("Encoder right - {}".format(en_count_right))
                 log_info.publish(Message(
                     "Hadabot heartbeat - IP {}".format(hadabot_ip_address)))
 
