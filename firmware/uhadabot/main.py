@@ -20,7 +20,7 @@ M_RIGHT_PWM_PIN = None
 M_LEFT_FR_PIN = None
 M_RIGHT_FR_PIN = None
 
-DEBOUNCE_MS = 2000
+DEBOUNCE_US = 2000
 debounce_left = 0
 debounce_right = 0
 EN_LEFT = 16
@@ -36,10 +36,10 @@ def encoder_handler_left(pin):
 
     # N microseconds since last interrupt
     m = time.ticks_us()
-    if (m - debounce_left) > DEBOUNCE_MS:
+    if (m - debounce_left) > DEBOUNCE_US:
         en_count_left += 1
 
-    # We assume real signal is less than debounce ms
+    # We assume real signal is less than debounce interval
     # so always update the last bounce time
     debounce_left = m
 
@@ -51,7 +51,7 @@ def encoder_handler_right(pin):
 
     # N microseconds since last interrupt
     m = time.ticks_us()
-    if (m - debounce_right) > DEBOUNCE_MS:
+    if (m - debounce_right) > DEBOUNCE_US:
         en_count_right += 1
 
     # We assume real signal is less than debounce ms
@@ -137,8 +137,6 @@ def setup_pins():
 
 
 ###############################################################################
-
-
 def main(argv):
     ros = None
 
@@ -166,18 +164,44 @@ def main(argv):
             ros, "hadabot/wheel_power_left", "std_msgs/Float32")
         lw_sub_topic.subscribe(left_wheel_cb)
 
+        # Publish out encoder messages
+        l_en_ticks_pub = Topic(ros, "hadabot/wheel_ticks_left",
+                               "std_msgs/UInt32")
+        r_en_ticks_pub = Topic(ros, "hadabot/wheel_ticks_right",
+                               "std_msgs/UInt32")
+
         # Loop forever
-        cnt = 0
+        last_hb_ms = time.ticks_ms()
+        last_en_ms = time.ticks_ms()
+        last_en_r = 0
+        last_en_l = 0
         while(boot_button.value() == 1):
             ros.run_once()
 
-            if (cnt % 1000) == 0:
+            cur_ms = time.ticks_ms()
+
+            # If the ticks changed, then publish more frequently
+            en_ticks_changed = (
+                (time.ticks_diff(cur_ms, last_en_ms) > 100) and
+                (last_en_l != en_count_left or last_en_r != en_count_right))
+            if time.ticks_diff(cur_ms, last_en_ms) > 2000 or en_ticks_changed:
+                # Publish encoder ticks
+                l_en_ticks_pub.publish(Message({"data": en_count_left}))
+                r_en_ticks_pub.publish(Message({"data": en_count_right}))
+
+                # Update values published
+                last_en_l = en_count_left
+                last_en_r = en_count_right
+                last_en_ms = cur_ms
+
+            # Publish heartbeat message
+            if time.ticks_diff(cur_ms, last_hb_ms) > 5000:
                 # logger.info("Encoder left - {}".format(en_count_left))
                 # logger.info("Encoder right - {}".format(en_count_right))
                 log_info.publish(Message(
                     "Hadabot heartbeat - IP {}".format(hadabot_ip_address)))
+                last_hb_ms = cur_ms
 
-            cnt += 1
             time.sleep(0.01)
 
         logger.info("Boot button pushed... exiting")
