@@ -1,4 +1,5 @@
 import os
+import machine
 
 
 def del_folder(folder):
@@ -28,7 +29,14 @@ def main(argv):
     # Create a stub boot.py for MicroPython
     os.remove("boot.py")
     with open("boot.py", "w") as f:
-        f.write("")
+        f.write("""import machine
+led_pin = machine.Pin(2, machine.Pin.OUT)
+led_pin.off()
+        """)
+
+    reset_irq = machine.Timer(-1)
+    reset_irq.init(mode=machine.Timer.ONE_SHOT, period=200,
+                   callback=lambda t: machine.reset())
 
     print("""
 Now you can copy the latest firmware on your system to the Hadabot's ESP32
