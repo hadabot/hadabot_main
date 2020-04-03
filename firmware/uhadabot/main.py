@@ -45,6 +45,7 @@ class Encoder:
         self.last_pub_us = 0
         self.last_pub_en_count = 0
         self.last_pub_en_count_us = time.ticks_us()
+        self.last_pub_radps = 0.0
 
     def irq_handler(self, pin):
         t_us = time.ticks_us()
@@ -62,21 +63,23 @@ class Encoder:
     def init_ros(self, ros):
         self.ros = ros
         self.ros_pub = Topic(
-            ros, "hadabot/wheel_rps_{}".format(self.name), "std_msgs/Float32")
+            ros, "hadabot/wheel_radps_{}".format(self.name), "std_msgs/Float32")
 
     def run_once(self):
         cur_us = time.ticks_us()
 
         # If the ticks changed, then publish more frequently
-        changed_pub_freq_ms = 200
-        nochange_pub_freq_ms = 2000
+        en_count_same = self.last_pub_en_count == self.en_count
+        stopped_after_moving = en_count_same and (self.last_pub_radps != 0.0)
+        changed_pub_freq_us = 100000 if stopped_after_moving else 200000
+        nochange_pub_freq_us = 2000000
         need_to_pub_change = (
             (time.ticks_diff(
-                cur_us, self.last_pub_us) > (changed_pub_freq_ms * 1000)) and
-            (self.last_pub_en_count != self.en_count))
-        if time.ticks_diff(
-                cur_us, self.last_pub_us) > (nochange_pub_freq_ms * 1000) or \
-                need_to_pub_change:
+                cur_us, self.last_pub_us) > (changed_pub_freq_us)) and
+            ((en_count_same is False) or stopped_after_moving))
+        need_to_pub_unchanged = time.ticks_diff(
+            cur_us, self.last_pub_us) > (nochange_pub_freq_us)
+        if need_to_pub_unchanged or need_to_pub_change:
             # Publish out radians per sec
             time_delta_us = time.ticks_diff(
                 self.en_count_us, self.last_pub_en_count_us)
@@ -93,6 +96,7 @@ class Encoder:
             self.last_pub_en_count = self.en_count
             self.last_pub_en_count_us = self.en_count_us
             self.last_pub_us = cur_us
+            self.last_pub_radps = rps
 
 
 ###############################################################################
