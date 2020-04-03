@@ -32,11 +32,14 @@ class Encoder:
 
     def __init__(self, name):
         self.name = name
+
+        # Used by IRQ handler, need semaphore?
         self.en_count = 0
-        self.en_count_us = 0
+        self.en_count_us = time.ticks_us()
 
         # Used for debouncing code
         self.en_debounce_us = 0
+        # END Used by IRQ handler
 
         self.ros = None
         self.ros_pub = None
@@ -44,8 +47,8 @@ class Encoder:
         # Used for when we publish out the tick count
         self.last_pub_us = 0
         self.last_pub_en_count = 0
-        self.last_pub_en_count_us = time.ticks_us()
-        self.last_pub_radps = 0.0
+        self.last_pub_en_count_us = self.en_count_us
+        self.last_pub_en_count_diff = 0
 
     def irq_handler(self, pin):
         t_us = time.ticks_us()
@@ -57,9 +60,6 @@ class Encoder:
         # so always update the last bounce time
         self.en_debounce_us = t_us
 
-    def get_ticks(self):
-        return self.en_count
-
     def init_ros(self, ros):
         self.ros = ros
         self.ros_pub = Topic(
@@ -68,35 +68,66 @@ class Encoder:
     def run_once(self):
         cur_us = time.ticks_us()
 
-        # If the ticks changed, then publish more frequently
-        en_count_same = self.last_pub_en_count == self.en_count
-        stopped_after_moving = en_count_same and (self.last_pub_radps != 0.0)
-        changed_pub_freq_us = 100000 if stopped_after_moving else 200000
+        # Do we need to disable IRQ to avoid race conditions??
+        en_count = self.en_count
+        en_count_us = self.en_count_us
+
+        # If the rotation changed, then publish more frequently. Even more
+        # frequently if stopped from a moving velocity
         nochange_pub_freq_us = 2000000
+
+        # The number of ticks between current tick count versus what we
+        # published last time
+        en_count_diff = en_count - self.last_pub_en_count
+
+        # If stopped from a moving velocity then publish that asap
+        changed_pub_freq_us = 100000 if en_count_diff == 0 else 200000
+
+        # Was the last published en_count delta same as what we published last
+        # time?
+        last_pub_same_as_current = self.last_pub_en_count_diff == en_count_diff
+
+        # If last published en_count delta is different from current delta,
+        # and enough time has elapsed, publish out
         need_to_pub_change = (
             (time.ticks_diff(
                 cur_us, self.last_pub_us) > (changed_pub_freq_us)) and
-            ((en_count_same is False) or stopped_after_moving))
+            (last_pub_same_as_current is False))
+
+        # If last published en_count delta is equal to current delta,
+        # and a longer time has elapsed, then publish out as well
         need_to_pub_unchanged = time.ticks_diff(
             cur_us, self.last_pub_us) > (nochange_pub_freq_us)
+
+        # Do we need to publish out?
         if need_to_pub_unchanged or need_to_pub_change:
             # Publish out radians per sec
             time_delta_us = time.ticks_diff(
-                self.en_count_us, self.last_pub_en_count_us)
+                en_count_us, self.last_pub_en_count_us)
+            if self.last_pub_en_count_diff == 0:
+                # If the wheels were not spinning, the last encoder update
+                # could have happened aeons ago, so use last published
+                # time for time delta to get more accurate rad per sec.
+                # Only significant if need_to_pub_change is true
+                time_delta_us = time.ticks_diff(en_count_us, self.last_pub_us)
             rps = 0.0
-            if time_delta_us != 0:
+
+            # Could be less than zero because our last encoder update could
+            # have happened before the last published update of unchanged
+            # state.
+            if time_delta_us > 0:
                 # Radians per second
                 radians = 2 * math.pi * ((
-                    self.en_count - self.last_pub_en_count) /
+                    en_count - self.last_pub_en_count) /
                     self.TICKS_PER_REVOLUTION)
                 rps = radians * 1000000.0 / float(time_delta_us)
             self.ros_pub.publish(Message({"data": rps}))
 
             # Update values published
-            self.last_pub_en_count = self.en_count
-            self.last_pub_en_count_us = self.en_count_us
+            self.last_pub_en_count = en_count
+            self.last_pub_en_count_us = en_count_us
             self.last_pub_us = cur_us
-            self.last_pub_radps = rps
+            self.last_pub_en_count_diff = en_count_diff
 
 
 ###############################################################################
