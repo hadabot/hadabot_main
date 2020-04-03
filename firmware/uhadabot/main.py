@@ -1,6 +1,7 @@
 from uhadabot.uroslibpy import Ros, Topic, Message
 from boot import CONFIG
 from machine import Pin, PWM
+import math
 import time
 import logging
 
@@ -20,43 +21,78 @@ M_RIGHT_PWM_PIN = None
 M_LEFT_FR_PIN = None
 M_RIGHT_FR_PIN = None
 
-DEBOUNCE_US = 2000
-debounce_left = 0
-debounce_right = 0
 EN_LEFT = 16
 EN_RIGHT = 17
-en_count_left = 0
-en_count_right = 0
 
 
 ###############################################################################
-def encoder_handler_left(pin):
-    global en_count_left
-    global debounce_left
+class Encoder:
+    TICKS_PER_REVOLUTION = 40.0
+    DEBOUNCE_US = 8000
 
-    # N microseconds since last interrupt
-    m = time.ticks_us()
-    if (m - debounce_left) > DEBOUNCE_US:
-        en_count_left += 1
+    def __init__(self, name):
+        self.name = name
+        self.en_count = 0
+        self.en_count_us = 0
 
-    # We assume real signal is less than debounce interval
-    # so always update the last bounce time
-    debounce_left = m
+        # Used for debouncing code
+        self.en_debounce_us = 0
 
+        self.ros = None
+        self.ros_pub = None
 
-###############################################################################
-def encoder_handler_right(pin):
-    global en_count_right
-    global debounce_right
+        # Used for when we publish out the tick count
+        self.last_pub_us = 0
+        self.last_pub_en_count = 0
+        self.last_pub_en_count_us = time.ticks_us()
 
-    # N microseconds since last interrupt
-    m = time.ticks_us()
-    if (m - debounce_right) > DEBOUNCE_US:
-        en_count_right += 1
+    def irq_handler(self, pin):
+        t_us = time.ticks_us()
+        if time.ticks_diff(t_us, self.en_debounce_us) > self.DEBOUNCE_US:
+            self.en_count += 1
+            self.en_count_us = t_us
 
-    # We assume real signal is less than debounce ms
-    # so always update the last bounce time
-    debounce_right = m
+        # We assume real signal is less than debounce interval
+        # so always update the last bounce time
+        self.en_debounce_us = t_us
+
+    def get_ticks(self):
+        return self.en_count
+
+    def init_ros(self, ros):
+        self.ros = ros
+        self.ros_pub = Topic(
+            ros, "hadabot/wheel_rps_{}".format(self.name), "std_msgs/Float32")
+
+    def run_once(self):
+        cur_us = time.ticks_us()
+
+        # If the ticks changed, then publish more frequently
+        changed_pub_freq_ms = 200
+        nochange_pub_freq_ms = 2000
+        need_to_pub_change = (
+            (time.ticks_diff(
+                cur_us, self.last_pub_us) > (changed_pub_freq_ms * 1000)) and
+            (self.last_pub_en_count != self.en_count))
+        if time.ticks_diff(
+                cur_us, self.last_pub_us) > (nochange_pub_freq_ms * 1000) or \
+                need_to_pub_change:
+            # Publish out radians per sec
+            time_delta_us = time.ticks_diff(
+                self.en_count_us, self.last_pub_en_count_us)
+            rps = 0.0
+            if time_delta_us != 0:
+                # Radians per second
+                radians = 2 * math.pi * ((
+                    self.en_count - self.last_pub_en_count) /
+                    self.TICKS_PER_REVOLUTION)
+                rps = radians * 1000000.0 / float(time_delta_us)
+            self.ros_pub.publish(Message({"data": rps}))
+
+            # Update values published
+            self.last_pub_en_count = self.en_count
+            self.last_pub_en_count_us = self.en_count_us
+            self.last_pub_us = cur_us
 
 
 ###############################################################################
@@ -108,7 +144,7 @@ def twist_cmd_cb(twist_msg):
 
 
 ###############################################################################
-def setup_pins():
+def setup_pins(en_left, en_right):
     global M_LEFT_PWM_PIN
     global M_RIGHT_PWM_PIN
     global M_LEFT_FR_PIN
@@ -131,16 +167,19 @@ def setup_pins():
     en_pin_right = Pin(EN_RIGHT, Pin.IN)
 
     en_pin_left.irq(trigger=(Pin.IRQ_FALLING | Pin.IRQ_RISING),
-                    handler=encoder_handler_left)
+                    handler=en_left.irq_handler)
     en_pin_right.irq(trigger=(Pin.IRQ_FALLING | Pin.IRQ_RISING),
-                     handler=encoder_handler_right)
+                     handler=en_right.irq_handler)
 
 
 ###############################################################################
 def main(argv):
     ros = None
 
-    setup_pins()
+    en_left = Encoder("left")
+    en_right = Encoder("right")
+
+    setup_pins(en_left, en_right)
 
     try:
         hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
@@ -165,34 +204,19 @@ def main(argv):
         lw_sub_topic.subscribe(left_wheel_cb)
 
         # Publish out encoder messages
-        l_en_ticks_pub = Topic(ros, "hadabot/wheel_ticks_left",
-                               "std_msgs/UInt32")
-        r_en_ticks_pub = Topic(ros, "hadabot/wheel_ticks_right",
-                               "std_msgs/UInt32")
+        en_left.init_ros(ros)
+        en_right.init_ros(ros)
 
         # Loop forever
         last_hb_ms = time.ticks_ms()
-        last_en_ms = time.ticks_ms()
-        last_en_r = 0
-        last_en_l = 0
         while(boot_button.value() == 1):
             ros.run_once()
 
             cur_ms = time.ticks_ms()
 
-            # If the ticks changed, then publish more frequently
-            en_ticks_changed = (
-                (time.ticks_diff(cur_ms, last_en_ms) > 100) and
-                (last_en_l != en_count_left or last_en_r != en_count_right))
-            if time.ticks_diff(cur_ms, last_en_ms) > 2000 or en_ticks_changed:
-                # Publish encoder ticks
-                l_en_ticks_pub.publish(Message({"data": en_count_left}))
-                r_en_ticks_pub.publish(Message({"data": en_count_right}))
-
-                # Update values published
-                last_en_l = en_count_left
-                last_en_r = en_count_right
-                last_en_ms = cur_ms
+            # Encoder management includes publishing out if necessary
+            en_left.run_once()
+            en_right.run_once()
 
             # Publish heartbeat message
             if time.ticks_diff(cur_ms, last_hb_ms) > 5000:
