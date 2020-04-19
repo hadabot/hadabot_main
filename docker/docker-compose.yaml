@@ -1,16 +1,8 @@
 version: "3.7"
 
 services:
-  portainer_service:
-    image: portainer/portainer:1.22.2
-    restart: always
-    ports:
-      - 9000:9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - hadabot_network
-  ros2_web_bridge_service:
+  hadabot_ros2_web_bridge_service:
+    container_name: hadabot_ros2_web_bridge
     build:
       context: ./
       dockerfile: Dockerfile.ros2_web_bridge
@@ -19,12 +11,16 @@ services:
       - "9090:9090"
     networks:
       - hadabot_network
-  ros2_console_service:
-    container_name: ros2_console
-    image: ros:eloquent
+  hadabot_ros2_codeserver_service:
+    container_name: hadabot_ros2_codeserver
+    build:
+      context: ./
+      dockerfile: Dockerfile.ros2_codeserver
+    image: hadabot/ros2-codeserver
+    ports:
+      - "9123:8080"
     volumes:
-      - ../content:/content
-    command: ["tail", "-f", "/dev/null"]
+      - ../../hadabot_main:/home/hadabot/hadabot_main
     networks:
       - hadabot_network
 
