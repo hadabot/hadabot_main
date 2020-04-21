@@ -1,3 +1,4 @@
 {
-    "files.autoSave": "off"
+    "files.autoSave": "off",
+    "editor.wordWrap": "wordWrapColumn"
 }
