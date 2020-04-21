@@ -1,5 +1,5 @@
-# docker build -t hadabot/ros2-codeserver
-# docker run -it --rm -p 6081:8080 -v `pwd`/..:hadabot_main hadabot/ros2-codercom
+# docker build -t hadabot/ros2-codeserver .
+# docker run -it --rm -p 6081:8080 -v `pwd`/..:hadabot_main hadabot/ros2-codeserver
 
 ARG FROM_IMAGE=ubuntu:bionic
 
@@ -18,7 +18,7 @@ ENV LANG en_US.UTF-8
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata && \
-    apt-get install -y ros-eloquent-ros-base python3-argcomplete && \
+    apt-get install -y ros-eloquent-ros-base python3-argcomplete python3-colcon-common-extensions && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up hadabot user
@@ -46,5 +46,10 @@ RUN wget https://github.com/cdr/code-server/releases/download/3.1.1/code-server-
 USER hadabot
 
 WORKDIR /home/hadabot
+
+RUN code-server --install-extension ms-vscode.cpptools
+
+COPY --chown=hadabot:hadabot ./config_files/coder.json .local/share/code-server/
+COPY --chown=hadabot:hadabot ./config_files/settings.json .local/share/code-server/User/
 
 CMD ["code-server", "--host", "0.0.0.0", "--auth", "none", "--disable-ssh", "--disable-updates"]
