@@ -128,6 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# ROS workspace
+content/**/*_ws/install/
+content/**/*_ws/log/
+
 # Others
 *.*~
 tmp/
