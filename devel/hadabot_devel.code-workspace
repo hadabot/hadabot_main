@@ -5,6 +5,9 @@
 		}
 	],
 	"settings": {
-		"files.autoSave": "off"
+		"files.autoSave": "off",
+		"python.autoComplete.extraPaths": [
+			"/opt/ros/eloquent/lib/python3.6/site-packages"
+		]
 	}
 }

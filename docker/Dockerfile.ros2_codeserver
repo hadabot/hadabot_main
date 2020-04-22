@@ -6,7 +6,7 @@ ARG FROM_IMAGE=ubuntu:bionic
 FROM $FROM_IMAGE AS cache
 
 RUN apt-get update && \
-    apt-get install -y locales curl gnupg2 lsb-release wget git sudo && \
+    apt-get install -y locales curl gnupg2 lsb-release wget git sudo unzip && \
     locale-gen en_US en_US.UTF-8 && \
     update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 && \
     export LANG=en_US.UTF-8 && \
@@ -16,24 +16,29 @@ RUN apt-get update && \
 
 ENV LANG en_US.UTF-8
 
+# Some ROS environment variables
+ENV ROS_DISTRO="eloquent"
+ENV ROS_PYTHON_VERSION="3"
+ENV ROS_VERSION="2"
+
 # Error with a ros1-bridge dependency if we install ros-eloquent-ros2bag*
 # so install each package individually igoring the package with the 
 # ros1-bridge dependency
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata && \
-    apt-get install -y ros-eloquent-ros-base ros-eloquent-ros2bag \
-        ros-eloquent-rosbag2-storage-default-plugins-dbgsym \
-        ros-eloquent-rosbag2-test-common \
-        ros-eloquent-rosbag2-converter-default-plugins \
-        ros-eloquent-rosbag2-tests \
-        ros-eloquent-rosbag2-dbgsym \
-        ros-eloquent-rosbag2-storage-dbgsym \
-        ros-eloquent-rosbag2-storage \
-        ros-eloquent-rosbag2-storage-default-plugins \
-        ros-eloquent-rosbag2 \
-        ros-eloquent-rosbag2-converter-default-plugins-dbgsym \
-        ros-eloquent-rosbag2-transport \
-        ros-eloquent-rosbag2-transport-dbgsym \
+    apt-get install -y ros-${ROS_DISTRO}-ros-base ros-${ROS_DISTRO}-ros2bag \
+        ros-${ROS_DISTRO}-rosbag2-storage-default-plugins-dbgsym \
+        ros-${ROS_DISTRO}-rosbag2-test-common \
+        ros-${ROS_DISTRO}-rosbag2-converter-default-plugins \
+        ros-${ROS_DISTRO}-rosbag2-tests \
+        ros-${ROS_DISTRO}-rosbag2-dbgsym \
+        ros-${ROS_DISTRO}-rosbag2-storage-dbgsym \
+        ros-${ROS_DISTRO}-rosbag2-storage \
+        ros-${ROS_DISTRO}-rosbag2-storage-default-plugins \
+        ros-${ROS_DISTRO}-rosbag2 \
+        ros-${ROS_DISTRO}-rosbag2-converter-default-plugins-dbgsym \
+        ros-${ROS_DISTRO}-rosbag2-transport \
+        ros-${ROS_DISTRO}-rosbag2-transport-dbgsym \
         python3-argcomplete python3-colcon-common-extensions && \
     rm -rf /var/lib/apt/lists/*
 
@@ -63,7 +68,14 @@ USER hadabot
 
 WORKDIR /home/hadabot
 
-RUN code-server --install-extension ms-vscode.cpptools
+RUN code-server --install-extension ms-vscode.cpptools && \
+    code-server --install-extension twxs.cmake
+
+# Install ROS vscode extension
+COPY --chown=hadabot:hadabot ./config_files/vscode-ros-dev-vsix.zip ./
+RUN unzip vscode-ros-dev-vsix.zip && \
+    code-server --install-extension vscode-ros-dev.vsix && \
+    rm vscode-ros-dev*.*
 
 COPY --chown=hadabot:hadabot ./config_files/coder.json .local/share/code-server/
 COPY --chown=hadabot:hadabot ./config_files/settings.json .local/share/code-server/User/
