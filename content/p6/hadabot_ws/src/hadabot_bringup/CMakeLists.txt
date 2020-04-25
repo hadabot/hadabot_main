@@ -19,12 +19,13 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(hadabot_driver src/hadabot_driver.cpp)
-ament_target_dependencies(hadabot_driver rclcpp std_msgs)
+ament_target_dependencies(hadabot_driver rclcpp std_msgs nav_msgs)
 target_include_directories(hadabot_driver PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
