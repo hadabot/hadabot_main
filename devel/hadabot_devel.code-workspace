@@ -8,6 +8,9 @@
 		"files.autoSave": "off",
 		"python.autoComplete.extraPaths": [
 			"/opt/ros/eloquent/lib/python3.6/site-packages"
-		]
+		],
+		"files.associations": {
+			"chrono": "cpp"
+		}
 	}
 }

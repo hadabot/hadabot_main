@@ -1,9 +1,16 @@
-# docker build -t hadabot/ros2-codeserver .
+# docker build -t hadabot/ros2-codeserver --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
 # docker run -it --rm -p 6081:8080 -v `pwd`/..:hadabot_main hadabot/ros2-codeserver
 
 ARG FROM_IMAGE=ubuntu:bionic
 
 FROM $FROM_IMAGE AS cache
+
+ARG USER_ID
+ARG GROUP_ID
+
+# Check for mandatory build arguments
+RUN : "${USER_ID:?Build argument needs to be set and non-empty.}" && \
+    : "${GROUP_ID:?Build argument needs to be set and non-empty.}"
 
 RUN apt-get update && \
     apt-get install -y locales curl gnupg2 lsb-release wget git sudo unzip && \
@@ -46,17 +53,12 @@ RUN apt-get update && \
 
 ENV SHELL=/bin/bash
 
-RUN adduser --gecos '' --disabled-password hadabot && \
+RUN addgroup --gid $GROUP_ID hadabot && \
+    adduser --gecos '' --disabled-password --uid $USER_ID --gid $GROUP_ID hadabot && \
     adduser hadabot sudo && \
     echo "hadabot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/nopasswd
 
 WORKDIR /root
-
-RUN curl -SsL https://github.com/boxboat/fixuid/releases/download/v0.4/fixuid-0.4-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - && \
-    chown root:root /usr/local/bin/fixuid && \
-    chmod 4755 /usr/local/bin/fixuid && \
-    mkdir -p /etc/fixuid && \
-    printf "user: hadabot\ngroup: hadabot\n" > /etc/fixuid/config.yml
 
 RUN wget https://github.com/cdr/code-server/releases/download/3.1.1/code-server-3.1.1-linux-x86_64.tar.gz && \
     tar -xzf code-server*.tar.gz && \
@@ -67,6 +69,7 @@ RUN wget https://github.com/cdr/code-server/releases/download/3.1.1/code-server-
 USER hadabot
 
 WORKDIR /home/hadabot
+ENV HOME=$WORKDIR
 
 RUN code-server --install-extension ms-vscode.cpptools && \
     code-server --install-extension twxs.cmake

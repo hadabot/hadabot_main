@@ -16,6 +16,9 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile.ros2_codeserver
+      args:
+        - USER_ID
+        - GROUP_ID
     image: hadabot/ros2-codeserver
     ports:
       - "9123:8080"
