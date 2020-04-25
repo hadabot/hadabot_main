@@ -1,0 +1,21 @@
+rosbag2_bagfile_information:
+  version: 2
+  storage_identifier: sqlite3
+  relative_file_paths:
+    - rosbag2_data/rosbag2_data.db3
+  duration:
+    nanoseconds: 11464892086
+  starting_time:
+    nanoseconds_since_epoch: 1587505827966619363
+  message_count: 150
+  topics_with_message_count:
+    - topic_metadata:
+        name: /hadabot/wheel_radps_right
+        type: std_msgs/msg/Float32
+        serialization_format: cdr
+      message_count: 58
+    - topic_metadata:
+        name: /hadabot/wheel_radps_left
+        type: std_msgs/msg/Float32
+        serialization_format: cdr
+      message_count: 92
