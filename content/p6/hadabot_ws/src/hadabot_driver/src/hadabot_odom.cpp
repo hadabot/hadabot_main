@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "tf2/LinearMath/Quaternion.h"
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
@@ -70,8 +71,12 @@ class HadabotDriver : public rclcpp::Node
 
       auto x_m = pose_->pose.pose.position.x;
       auto y_m = pose_->pose.pose.position.y;
-      pose_->pose.pose.orientation.z = quaternion_from_euler(
-        0, 0, theta_rad + theta_rad_dt);
+      tf2::Quaternion q;
+      q.setEuler(0, 0, theta_rad + theta_rad_dt);
+      pose_->pose.pose.orientation.x = q.getX();
+      pose_->pose.pose.orientation.y = q.getY();
+      pose_->pose.pose.orientation.z = q.getZ(); 
+      pose_->pose.pose.orientation.w = q.getW(); 
       pose_->pose.pose.position.x = x_m + x_m_dt;
       pose_->pose.pose.position.y = y_m + y_m_dt;
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(hadabot_bringup)
+project(hadabot_driver)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -24,13 +24,13 @@ find_package(nav_msgs REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(hadabot_driver src/hadabot_driver.cpp)
-ament_target_dependencies(hadabot_driver rclcpp std_msgs nav_msgs)
-target_include_directories(hadabot_driver PUBLIC
+add_executable(hadabot_odom src/hadabot_odom.cpp)
+ament_target_dependencies(hadabot_odom rclcpp std_msgs nav_msgs)
+target_include_directories(hadabot_odom PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-install(TARGETS hadabot_driver
+install(TARGETS hadabot_odom
   EXPORT export_${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
