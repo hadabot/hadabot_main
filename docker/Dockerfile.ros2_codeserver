@@ -66,13 +66,18 @@ RUN wget https://github.com/cdr/code-server/releases/download/3.1.1/code-server-
     mv code-server* /usr/local/lib/code-server && \
     ln -s /usr/local/lib/code-server/code-server /usr/local/bin/code-server
 
+# Other packages we need
+RUN apt-get update && apt-get install -y gdb python3-pip virtualenvwrapper && \
+    rm -rf /var/lib/apt/lists/*
+
 USER hadabot
 
 WORKDIR /home/hadabot
 ENV HOME=$WORKDIR
 
 RUN code-server --install-extension ms-vscode.cpptools && \
-    code-server --install-extension twxs.cmake
+    code-server --install-extension twxs.cmake && \
+    /usr/bin/python3 -m pip install -U autopep8 flake8 --user 
 
 # Install ROS vscode extension
 COPY --chown=hadabot:hadabot ./config_files/vscode-ros-dev-vsix.zip ./

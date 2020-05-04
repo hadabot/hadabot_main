@@ -70,7 +70,8 @@ class HadabotDriver : public rclcpp::Node
 
       auto x_m = pose_->pose.pose.position.x;
       auto y_m = pose_->pose.pose.position.y;
-      pose_->pose.pose.orientation.z = theta_rad + theta_rad_dt;
+      pose_->pose.pose.orientation.z = quaternion_from_euler(
+        0, 0, theta_rad + theta_rad_dt);
       pose_->pose.pose.position.x = x_m + x_m_dt;
       pose_->pose.pose.position.y = y_m + y_m_dt;
 
