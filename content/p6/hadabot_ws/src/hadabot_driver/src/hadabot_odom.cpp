@@ -72,24 +72,19 @@ class HadabotDriver : public rclcpp::Node
       auto x_m = pose_->pose.pose.position.x;
       auto y_m = pose_->pose.pose.position.y;
       tf2::Quaternion q;
-      q.setEuler(0, 0, theta_rad + theta_rad_dt);
+      q.setRPY(0.0, 0.0, theta_rad + theta_rad_dt);
       pose_->pose.pose.orientation.x = q.getX();
       pose_->pose.pose.orientation.y = q.getY();
       pose_->pose.pose.orientation.z = q.getZ(); 
       pose_->pose.pose.orientation.w = q.getW(); 
       pose_->pose.pose.position.x = x_m + x_m_dt;
       pose_->pose.pose.position.y = y_m + y_m_dt;
-
       pose_->twist.twist.linear.x = d_center_m / dt_s;
       pose_->twist.twist.angular.z = phi_rad / dt_s;
     }
 
     void publish_odometry()
     {
-      //rclcpp::Clock clk = rclcpp::Clock();
-      //double t = clk.now().seconds();
-      // RCLCPP_INFO(this->get_logger(), "Time: %f", t);
-      
       odometry_pub_->publish(*pose_);
     }
 
