@@ -34,6 +34,16 @@ install(TARGETS hadabot_odom
   EXPORT export_${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
+add_executable(hadabot_odom_diy src/hadabot_odom_diy.cpp)
+ament_target_dependencies(hadabot_odom_diy rclcpp std_msgs nav_msgs)
+target_include_directories(hadabot_odom_diy PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+install(TARGETS hadabot_odom_diy
+  EXPORT export_${PROJECT_NAME}
+  DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

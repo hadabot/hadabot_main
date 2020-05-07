@@ -2,7 +2,7 @@ rosbag2_bagfile_information:
   version: 2
   storage_identifier: sqlite3
   relative_file_paths:
-    - rosbag2_data/rosbag2_data.db3
+    - rosbag2_wheel_rotational_velocity_data/rosbag2_wheel_rotational_velocity_data.db3
   duration:
     nanoseconds: 11464892086
   starting_time:

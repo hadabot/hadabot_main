@@ -21,25 +21,28 @@ source install/setup.bash
 ros2 run hadabot_driver hadabot_odom
 ```
 
-4. Open another terminal next to your current terminal by clicking the side-by-side panel icon to the left of the __TERMINAL__ sub-menu bar. If you hover over the icon, it should say "Split Terminal".
+4. Start a 2nd terminal next to your current terminal by clicking the side-by-side panel icon to the left of the __TERMINAL__ sub-menu bar. If you hover over the icon, it should say "Split Terminal".
 
 1. In the new terminal, type the following command to see the initial odometry.
 
 ```
-source hadabot_ws/install/setup.bash
+source install/setup.bash
 ros2 topic echo /hadabot/odom
 ```
 
 ### Use pre-saved wheel rotational velocity data to update odometry
 
-1. Let's play back some wheel rotational velocity messages we pre-saved as [ROS Bags](http://wiki.ros.org/Bags) so the odometry gets updated.
-    1. "Split Terminal" again to create a new terminal. __You should now have 3 terminal windows opened side-by-side__.
-        1. __PRO TIP__: The horizontal layout may be getting crowded. Right-click in the empty space to the left of the "1: bash, bash" terminal name drop-down menu and select "Move Panel Right" to get a vertical layout.
-    1. In the new, third, terminal, type:
+Let's play back some wheel rotational velocity messages we pre-saved as [ROS Bags](http://wiki.ros.org/Bags) so the odometry gets updated.
+
+1. "Split Terminal" again to create a new terminal. __You should now have 3 terminal windows opened side-by-side__.
+    1. __PRO TIP__: The horizontal layout may be getting crowded. Right-click in the empty space to the right of the "DEBUG CONSOLE" in the TERMINAL menu bar. A drop-down menu will appear. Select "Move Panel Right" to get a vertical layout.
+
+1. In the new, third, terminal, type:
 
 ```
-source hadabot_ws/install/setup.bash
-ros2 bag play rosbag2_data
+source install/setup.bash
+cd ~/hadabot_main/content/p6
+ros2 bag play rosbag2_wheel_rotational_velocity_data
 ```
 
 2. At this point, you should start seeing updated pose and velocity (Twist) data being echo'd back in your 2nd "topic echo" terminal window.
