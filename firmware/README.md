@@ -26,7 +26,7 @@
     1. Upload the Hadabot firmware code to the ESP32
 	    1. `cd ..` to go back to _hadabot\_main/firmware_
         1. (OPTIONAL - To clean the existing code first)
-	        1. `ampy --port /dev/tty.<ESP32_USB_PORT> rmdir uhadabot`
+            1. `ampy --port /dev/tty.<ESP32_USB_PORT> run clean_firmware.py`
         1. `ampy --port /dev/tty.<ESP32_USB_PORT> put uhadabot`
         1. `ampy --port /dev/tty.<ESP32_USB_PORT> put boot.py`
 	1. Reset the board by pressing the "EN" button for a sec and releasing it.
