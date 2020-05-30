@@ -36,6 +36,21 @@ install(TARGETS hadabot_controller
   EXPORT export_${PROJECT_NAME}
   DESTINATION lib/${PROJECT_NAME})
 
+add_executable(hadabot_controller_diy src/hadabot_controller_diy.cpp)
+target_include_directories(hadabot_controller_diy PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(
+  hadabot_controller_diy
+  "rclcpp"
+  "std_msgs"
+  "nav_msgs"
+)
+
+install(TARGETS hadabot_controller_diy
+  EXPORT export_${PROJECT_NAME}
+  DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

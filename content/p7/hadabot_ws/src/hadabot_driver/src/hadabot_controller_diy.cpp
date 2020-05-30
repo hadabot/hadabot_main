@@ -120,8 +120,9 @@ private:
     float v = twist_msg->linear.x;
     float w = twist_msg->angular.z;
 
-    auto v_r = ((2.0 * v) + (w * wheelbase_m_)) / (2 * wheel_radius_m_);
-    auto v_l = ((2.0 * v) - (w * wheelbase_m_)) / (2 * wheel_radius_m_);
+    // Implement your unicycle to differential drive converstion below
+    auto v_r = v * w * 0.0;
+    auto v_l = v * w * 0.0;
 
     std_msgs::msg::Float32 pow_r;
     std_msgs::msg::Float32 pow_l;
