@@ -1,1 +1,1 @@
-../../../../firmware/uhadabot/webrepl_cfg.py
+PASS = 'hadabot'
