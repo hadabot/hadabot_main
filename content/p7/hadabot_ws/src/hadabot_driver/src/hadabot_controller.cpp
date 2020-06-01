@@ -135,6 +135,8 @@ private:
 public:
   HadabotController() : Node("hadabot_controller"), wheel_radius_m_(0.035), wheelbase_m_(0.14), wheel_radps_left_(0.0), wheel_radps_right_(0.0), pose_(std::make_shared<nav_msgs::msg::Odometry>())
   {
+    RCLCPP_INFO(this->get_logger(), "Starting Hadabot Controller");
+
     twist_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "/hadabot/cmd_vel", 10,
         std::bind(&HadabotController::twist_cb, this, _1));
