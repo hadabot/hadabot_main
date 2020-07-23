@@ -19,9 +19,11 @@ services:
       args:
         - USER_ID=${USER_ID:-1000}
         - GROUP_ID=${GROUP_ID:-1000}
-    image: hadabot/ros2-codeserver
+    image: hadabot/ros2-codeserver:foxy
     ports:
       - "9123:8080"
+      - "9124:80"
+      - "9125:5900"
     volumes:
       - ../../hadabot_main:/home/hadabot/hadabot_main
     networks:

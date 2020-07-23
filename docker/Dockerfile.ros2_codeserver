@@ -1,7 +1,7 @@
-# docker build -t hadabot/ros2-codeserver --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
+# docker build -t hadabot/ros2-codeserver:foxy --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) .
 # docker run -it --rm -p 6081:8080 -v `pwd`/..:hadabot_main hadabot/ros2-codeserver
 
-ARG FROM_IMAGE=ubuntu:bionic
+ARG FROM_IMAGE=dorowu/ubuntu-desktop-lxde-vnc:focal
 
 FROM $FROM_IMAGE AS cache
 
@@ -24,29 +24,60 @@ RUN apt-get update && \
 ENV LANG en_US.UTF-8
 
 # Some ROS environment variables
-ENV ROS_DISTRO="eloquent"
+ENV ROS_DISTRO="foxy"
 ENV ROS_PYTHON_VERSION="3"
 ENV ROS_VERSION="2"
 
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata && \
+    apt-get install -y \
+      ros-${ROS_DISTRO}-desktop && \
+    rm -rf /var/lib/apt/lists/*
+    
 # Error with a ros1-bridge dependency if we install ros-eloquent-ros2bag*
 # so install each package individually igoring the package with the 
 # ros1-bridge dependency
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata && \
-    apt-get install -y ros-${ROS_DISTRO}-ros-base ros-${ROS_DISTRO}-ros2bag \
-        ros-${ROS_DISTRO}-rosbag2-storage-default-plugins-dbgsym \
-        ros-${ROS_DISTRO}-rosbag2-test-common \
-        ros-${ROS_DISTRO}-rosbag2-converter-default-plugins \
-        ros-${ROS_DISTRO}-rosbag2-tests \
-        ros-${ROS_DISTRO}-rosbag2-dbgsym \
-        ros-${ROS_DISTRO}-rosbag2-storage-dbgsym \
-        ros-${ROS_DISTRO}-rosbag2-storage \
-        ros-${ROS_DISTRO}-rosbag2-storage-default-plugins \
-        ros-${ROS_DISTRO}-rosbag2 \
-        ros-${ROS_DISTRO}-rosbag2-converter-default-plugins-dbgsym \
-        ros-${ROS_DISTRO}-rosbag2-transport \
-        ros-${ROS_DISTRO}-rosbag2-transport-dbgsym \
-        python3-argcomplete python3-colcon-common-extensions && \
+    apt-get install -y \
+      ros-${ROS_DISTRO}-image-common \
+      ros-${ROS_DISTRO}-image-pipeline \
+      # ros-${ROS_DISTRO}-rosbag2-dbgsym \
+      ros-${ROS_DISTRO}-ros2bag \
+      ros-${ROS_DISTRO}-rosbag2-storage-default-plugins-dbgsym \
+      ros-${ROS_DISTRO}-rosbag2-test-common \
+      ros-${ROS_DISTRO}-rosbag2-converter-default-plugins \
+      ros-${ROS_DISTRO}-rosbag2-tests \
+      ros-${ROS_DISTRO}-rosbag2-storage-dbgsym \
+      ros-${ROS_DISTRO}-rosbag2-storage \
+      ros-${ROS_DISTRO}-rosbag2-storage-default-plugins \
+      ros-${ROS_DISTRO}-rosbag2 \
+      ros-${ROS_DISTRO}-rosbag2-converter-default-plugins-dbgsym \
+      ros-${ROS_DISTRO}-rosbag2-transport \
+      ros-${ROS_DISTRO}-rosbag2-transport-dbgsym && \
+    rm -rf /var/lib/apt/lists/*
+    
+RUN apt-get update && apt-get install -y \
+    	google-mock \
+	libceres-dev \
+	liblua5.3-dev \
+	libboost-dev \
+	libboost-iostreams-dev \
+	libprotobuf-dev \
+	protobuf-compiler \
+	libcairo2-dev \
+	libpcl-dev \
+	python3-sphinx && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+    apt-get install -y gazebo11 libgazebo11-dev \
+    	    ros-${ROS_DISTRO}-test-msgs && \
+    apt-get install -y \
+            python3-argcomplete \
+    	    python3-vcstool \
+    	    python3-rosdep \
+	    python3-colcon-common-extensions \
+	    python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
 # Set up hadabot user
@@ -60,11 +91,17 @@ RUN addgroup --gid $GROUP_ID hadabot && \
 
 WORKDIR /root
 
-RUN wget https://github.com/cdr/code-server/releases/download/3.1.1/code-server-3.1.1-linux-x86_64.tar.gz && \
-    tar -xzf code-server*.tar.gz && \
-    rm code-server*.tar.gz && \
-    mv code-server* /usr/local/lib/code-server && \
-    ln -s /usr/local/lib/code-server/code-server /usr/local/bin/code-server
+# New way to install code server
+# https://github.com/cdr/code-server/blob/master/doc/install.md#debian-ubuntu
+ARG CS_VERSION=3.4.1
+RUN mkdir -p code_server && cd code_server && \
+    curl -fOL https://github.com/cdr/code-server/releases/download/v${CS_VERSION}/code-server_${CS_VERSION}_amd64.deb && \
+    dpkg -i code-server_${CS_VERSION}_amd64.deb && \
+    rm code-server_*.deb
+
+RUN echo "[program:codeserver]" >> /etc/supervisor/conf.d/codeserver.conf && \
+    echo "user=hadabot" >> /etc/supervisor/conf.d/codeserver.conf && \
+    echo "command=/usr/bin/code-server --host 0.0.0.0 --auth none --disable-telemetry" >> /etc/supervisor/conf.d/codeserver.conf
 
 # Other packages we need
 RUN apt-get update && apt-get install -y gdb python3-pip virtualenvwrapper && \
@@ -75,9 +112,14 @@ USER hadabot
 WORKDIR /home/hadabot
 ENV HOME=$WORKDIR
 
-RUN code-server --install-extension ms-vscode.cpptools && \
+# https://github.com/microsoft/vscode-python/releases/download/2020.7.94776/ms-python-release.vsix
+RUN wget https://github.com/microsoft/vscode-python/releases/download/2020.5.86806/ms-python-release.vsix && \
+    code-server --verbose --install-extension ms-python-release.vsix && \
+    rm ms-python-release.vsix && \
+    code-server --install-extension ms-vscode.cpptools && \
     code-server --install-extension twxs.cmake && \
-    /usr/bin/python3 -m pip install -U autopep8 flake8 --user 
+    /usr/bin/python3 -m pip install -U autopep8 flake8 --user && \
+    echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> .bashrc
 
 # Install ROS vscode extension
 COPY --chown=hadabot:hadabot ./config_files/vscode-ros-dev-vsix.zip ./
@@ -88,4 +130,7 @@ RUN unzip vscode-ros-dev-vsix.zip && \
 COPY --chown=hadabot:hadabot ./config_files/coder.json .local/share/code-server/
 COPY --chown=hadabot:hadabot ./config_files/settings.json .local/share/code-server/User/
 
-CMD ["code-server", "--host", "0.0.0.0", "--auth", "none", "--disable-ssh", "--disable-updates"]
+USER root
+
+ENV USER=hadabot
+ENTRYPOINT ["/startup.sh"]

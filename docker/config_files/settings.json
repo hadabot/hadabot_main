@@ -1,5 +1,6 @@
 {
-    "files.autoSave": "off",
-    "editor.wordWrap": "wordWrapColumn",
-    "C_Cpp.updateChannel": "Insiders"
+  "files.autoSave": "off",
+  "editor.wordWrap": "wordWrapColumn",
+  "C_Cpp.updateChannel": "Insiders",
+  "extensions.autoUpdate": false
 }
