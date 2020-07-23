@@ -1,4 +1,4 @@
-ARG FROM_IMAGE=ros:eloquent
+ARG FROM_IMAGE=ros:foxy
 
 FROM $FROM_IMAGE
 
@@ -9,7 +9,7 @@ RUN apt-get update && \
     apt-get install -y nodejs && \
     git clone https://github.com/RobotWebTools/ros2-web-bridge.git && \
     cd ros2-web-bridge && \
-    git checkout 0.2.7 -b rel_branch
+    git checkout 0.3.0 -b rel_branch
 
 WORKDIR /ros2-web-bridge
 

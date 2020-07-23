@@ -6,7 +6,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile.ros2_web_bridge
-    image: hadabot/ros2-web-bridge:0.2.7
+    image: hadabot/ros2-web-bridge:0.3.0
     ports:
       - "9090:9090"
     networks:
