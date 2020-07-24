@@ -29,8 +29,10 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Nav needs TF. Specifically:
-    # ros2 run tf2_ros static_transform_publisher 1 2 3 0.5 0.1 -1.0 odom base_link
-    # ros2 run tf2_ros static_transform_publisher 1 2 3 0.5 0.1 -1.0 map odom
+    # ros2 run tf2_ros static_transform_publisher
+    #   1 2 3 0.5 0.1 -1.0 odom base_link
+    # ros2 run tf2_ros static_transform_publisher
+    #   1 2 3 0.5 0.1 -1.0 map odom
 
     # Get the launch directory
     bringup_dir = get_package_share_directory('nav2_bringup')
@@ -58,8 +60,8 @@ def generate_launch_description():
     # https://github.com/ros/robot_state_publisher/pull/30
     # TODO(orduno) Substitute with `PushNodeRemapping`
     #              https://github.com/ros2/launch_ros/issues/56
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static')]
+    # remappings = [('/tf', 'tf'),
+    #              ('/tf_static', 'tf_static')]
 
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(

@@ -104,7 +104,13 @@ RUN echo "[program:codeserver]" >> /etc/supervisor/conf.d/codeserver.conf && \
     echo "command=/usr/bin/code-server --host 0.0.0.0 --auth none --disable-telemetry" >> /etc/supervisor/conf.d/codeserver.conf
 
 # Other packages we need
-RUN apt-get update && apt-get install -y gdb python3-pip virtualenvwrapper && \
+RUN apt-get update && apt-get install -y \
+        gdb \
+        python3-pip \
+        virtualenvwrapper && \
+    apt-get install -y \
+        ros-${ROS_DISTRO}-navigation2 \
+        ros-${ROS_DISTRO}-nav2-bringup && \
     rm -rf /var/lib/apt/lists/*
 
 USER hadabot
