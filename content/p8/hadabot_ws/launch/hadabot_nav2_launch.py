@@ -169,4 +169,12 @@ def generate_launch_description():
         remappings=[("/turtlesim1/turtle1/cmd_vel", "/cmd_vel")]
     ))
 
+    # Add tf2 broadcaster
+    ld.add_action(Node(
+        package='hadabot_tf2',
+        executable='hadabot_tf2_broadcaster',
+        name='hadabot_tf2_broadbaster_node',
+        remappings=[("/pose", "/turtlesim1/turtle1/pose")]
+    ))
+
     return ld
