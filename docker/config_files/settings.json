@@ -2,5 +2,8 @@
   "files.autoSave": "off",
   "editor.wordWrap": "wordWrapColumn",
   "C_Cpp.updateChannel": "Insiders",
-  "extensions.autoUpdate": false
+  "extensions.autoUpdate": false,
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools"
+  }
 }
