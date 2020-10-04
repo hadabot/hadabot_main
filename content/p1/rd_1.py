@@ -5,7 +5,7 @@ def main(argv=None):
     print(f"""
 First read these instructions. Then do it!
 
-1. In the vs-studio, start a new terminal.
+1. In the web-browser based VSCode tab, start a new terminal.
 
 2. In this terminal term #1, type the following, ** one line at a time **, into the bash terminal:
 
