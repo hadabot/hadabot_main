@@ -12,9 +12,9 @@ You will only need one (1) web-bash terminal for this example.
 
      https://www.hadabot.com/tools/teleop.html
 
-2. In this web-bash terminal, type the following, ** one line at a time **:
+2. In this terminal, type the following, ** one line at a time **:
 
-     source /opt/ros/eloquent/setup.bash
+     source /opt/ros/foxy/setup.bash
 
      ros2 topic echo /hadabot/cmd_vel
 

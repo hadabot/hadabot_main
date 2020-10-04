@@ -3,9 +3,9 @@ from shared.utils import FOOTER
 
 def main(argv=None):
     print(f"""
-1. Type the following, ** one line at a time **, into the web-bash terminal:
+1. Type the following, ** one line at a time **, into the terminal:
 
-     source /opt/ros/eloquent/setup.bash
+     source /opt/ros/foxy/setup.bash
 
      ros2 topic echo /chatter
 

@@ -9,7 +9,7 @@ Follow these steps to compile the source code
 1. In the terminal, type: 
 
 ```
-source /opt/ros/eloquent/setup.bash
+source /opt/ros/foxy/setup.bash
 cd hadabot_ws
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
 ```

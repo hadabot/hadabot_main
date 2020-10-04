@@ -9,9 +9,9 @@ def main(argv=None):
 
 2. Move the LEFT wheel's power slider up.
 
-3. Use ROS to echo back the wheel rotational velocity. In this web-bash terminal, type the following, ** one line at a time **:
+3. Use ROS to echo back the wheel rotational velocity. In this terminal, type the following, ** one line at a time **:
 
-     source /opt/ros/eloquent/setup.bash
+     source /opt/ros/foxy/setup.bash
 
      ros2 topic echo /hadabot/wheel_radps_left
 
