@@ -35,6 +35,17 @@ ament_target_dependencies(
   turtlesim
 )
 
+add_executable(hadabot_tf2_broadcaster_diy src/hadabot_tf2_broadcaster_diy.cpp)
+ament_target_dependencies(
+  hadabot_tf2_broadcaster_diy 
+  rclcpp 
+  tf2 
+  tf2_ros
+  tf2_msgs
+  geometry_msgs 
+  turtlesim
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -48,6 +59,7 @@ endif()
 
 install(TARGETS
   hadabot_tf2_broadcaster
+  hadabot_tf2_broadcaster_diy
   DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
