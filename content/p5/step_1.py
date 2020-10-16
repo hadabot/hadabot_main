@@ -6,7 +6,7 @@ def main(argv=None):
 ############################################################
 First read these instructions. Then do it!
 
-You will only need one (1) web-bash terminal for this example. You should have a Hadabot ESP32 board loaded with the required firware files and connected to your network. The built-in LED on the ESP32 board should be lit which means connected.
+You will only need one (1) terminal for this example. You should have a Hadabot ESP32 board loaded with the required firware files and connected to your network. The built-in LED on the ESP32 board should be lit which means connected.
 
 You should have the L9110 motor driver AND a pair of wheel encoders connected to the ESP32.
 
