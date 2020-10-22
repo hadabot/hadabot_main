@@ -58,8 +58,8 @@ class HadabotDriver : public rclcpp::Node
       auto dt_s = dt_ms.count() / 1000.0;
 
       // Compute distance traveled for each wheel
-      float d_left_m = (wheel_radps_left_ * dt_s * wheel_radius_m_) / PI;
-      float d_right_m = (wheel_radps_right_ * dt_s * wheel_radius_m_) / PI;
+      float d_left_m = wheel_radps_left_ * dt_s * wheel_radius_m_;
+      float d_right_m = wheel_radps_right_ * dt_s * wheel_radius_m_;
 
       auto d_center_m = (d_right_m + d_left_m) / 2.0;
       auto phi_rad = (d_right_m - d_left_m) / wheelbase_m_;
