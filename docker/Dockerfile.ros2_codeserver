@@ -118,14 +118,20 @@ USER hadabot
 WORKDIR /home/hadabot
 ENV HOME=$WORKDIR
 
+# Explicitly download correct cpptools-linux version since code-server downloads the wrong cpptools aarch version which causes exceptions - https://github.com/cdr/code-server/issues/2120 and https://github.com/hadabot/hadabot_main/issues/10
+# code-server --install-extension ms-vscode.cpptools && \    
+# Newer python extension also has issues
 # https://github.com/microsoft/vscode-python/releases/download/2020.7.94776/ms-python-release.vsix
-RUN wget https://github.com/microsoft/vscode-python/releases/download/2020.5.86806/ms-python-release.vsix && \
+RUN wget https://github.com/microsoft/vscode-cpptools/releases/download/1.0.1/cpptools-linux.vsix && \
+    wget https://github.com/microsoft/vscode-python/releases/download/2020.5.86806/ms-python-release.vsix && \
+    code-server --verbose --install-extension cpptools-linux.vsix && \
     code-server --verbose --install-extension ms-python-release.vsix && \
+    rm cpptools-linux.vsix && \
     rm ms-python-release.vsix && \
-    code-server --install-extension ms-vscode.cpptools && \
     code-server --install-extension twxs.cmake && \
     /usr/bin/python3 -m pip install -U autopep8 flake8 --user && \
     echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> .bashrc
+
 
 # Install ROS vscode extension
 COPY --chown=hadabot:hadabot ./config_files/vscode-ros-dev-vsix.zip ./
