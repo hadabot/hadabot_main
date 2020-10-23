@@ -8,11 +8,13 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "tf2/LinearMath/Quaternion.h"
+#include "tf2/LinearMath/Matrix3x3.h"
 
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-typedef enum {
+typedef enum
+{
   LEFT,
   RIGHT
 } HBSide;
@@ -25,7 +27,6 @@ typedef enum {
 class HadabotController : public rclcpp::Node
 {
 private:
-
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr wheel_power_right_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr wheel_power_left_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_pub_;
@@ -48,16 +49,17 @@ private:
 
   /***************************************************************************/
   void wheel_radps(
-    const std_msgs::msg::Float32::SharedPtr msg, HBSide which_side)
+      const std_msgs::msg::Float32::SharedPtr msg, HBSide which_side)
   {
     std::string the_side = which_side == HBSide::LEFT ? "left" : "right";
 
-    switch(which_side) {
-      case HBSide::LEFT:
+    switch (which_side)
+    {
+    case HBSide::LEFT:
       wheel_radps_left_ = msg->data;
       break;
 
-      case HBSide::RIGHT:
+    case HBSide::RIGHT:
       wheel_radps_right_ = msg->data;
       break;
     }
@@ -76,20 +78,31 @@ private:
   }
 
   /***************************************************************************/
-  void update_odometry() 
+  void update_odometry()
   {
     // Get the time delta since last update
     auto dt_ms = UPDATE_DT;
     auto dt_s = dt_ms.count() / 1000.0;
 
     // Compute distance traveled for each wheel
-    float d_left_m = (wheel_radps_left_ * dt_s * wheel_radius_m_) / PI;
-    float d_right_m = (wheel_radps_right_ * dt_s * wheel_radius_m_) / PI;
+    float d_left_m = wheel_radps_left_ * dt_s * wheel_radius_m_;
+    float d_right_m = wheel_radps_right_ * dt_s * wheel_radius_m_;
 
     auto d_center_m = (d_right_m + d_left_m) / 2.0;
     auto phi_rad = (d_right_m - d_left_m) / wheelbase_m_;
 
-    auto theta_rad = pose_->pose.pose.orientation.z;
+    // Get current yaw orientation from quaternion
+    tf2::Quaternion q_current_orientation(
+        pose_->pose.pose.orientation.x,
+        pose_->pose.pose.orientation.y,
+        pose_->pose.pose.orientation.z,
+        pose_->pose.pose.orientation.w);
+    tf2::Matrix3x3 m(q_current_orientation);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    auto theta_rad = yaw;
+
+    // How much did we rotate?
     auto x_m_dt = d_center_m * std::cos(theta_rad);
     auto y_m_dt = d_center_m * std::sin(theta_rad);
     auto theta_rad_dt = phi_rad;
@@ -100,8 +113,8 @@ private:
     q.setRPY(0.0, 0.0, theta_rad + theta_rad_dt);
     pose_->pose.pose.orientation.x = q.getX();
     pose_->pose.pose.orientation.y = q.getY();
-    pose_->pose.pose.orientation.z = q.getZ(); 
-    pose_->pose.pose.orientation.w = q.getW(); 
+    pose_->pose.pose.orientation.z = q.getZ();
+    pose_->pose.pose.orientation.w = q.getW();
     pose_->pose.pose.position.x = x_m + x_m_dt;
     pose_->pose.pose.position.y = y_m + y_m_dt;
     pose_->twist.twist.linear.x = d_center_m / dt_s;
@@ -133,9 +146,21 @@ private:
   }
 
 public:
-  HadabotController() : Node("hadabot_controller"), wheel_radius_m_(0.035), wheelbase_m_(0.14), wheel_radps_left_(0.0), wheel_radps_right_(0.0), pose_(std::make_shared<nav_msgs::msg::Odometry>())
+  HadabotController() : Node("hadabot_controller"), wheel_radius_m_(0.035), wheelbase_m_(0.14), wheel_radps_left_(0.0), wheel_radps_right_(0.0)
   {
     RCLCPP_INFO(this->get_logger(), "Starting Hadabot Controller");
+
+    // Initialize pose
+    pose_ = std::make_shared<nav_msgs::msg::Odometry>();
+    tf2::Quaternion q;
+    q.setEuler(0, 0, 0);
+    pose_->pose.pose.orientation.x = q.getX();
+    pose_->pose.pose.orientation.y = q.getY();
+    pose_->pose.pose.orientation.z = q.getZ();
+    pose_->pose.pose.orientation.w = q.getW();
+    pose_->pose.pose.position.x = 0.0;
+    pose_->pose.pose.position.y = 0.0;
+    pose_->pose.pose.position.z = 0.0;
 
     twist_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "/hadabot/cmd_vel", 10,
@@ -143,27 +168,25 @@ public:
 
     radps_left_sub_ = this->create_subscription<std_msgs::msg::Float32>(
         "/hadabot/wheel_radps_left", 10,
-        std::bind(&HadabotController::wheel_radps_left_cb, this, _1)
-      );
+        std::bind(&HadabotController::wheel_radps_left_cb, this, _1));
 
     radps_right_sub_ = this->create_subscription<std_msgs::msg::Float32>(
-      "/hadabot/wheel_radps_right", 10,
-      std::bind(&HadabotController::wheel_radps_right_cb, this, _1)
-    );
+        "/hadabot/wheel_radps_right", 10,
+        std::bind(&HadabotController::wheel_radps_right_cb, this, _1));
 
     odometry_pub_ = this->create_publisher<nav_msgs::msg::Odometry>(
-      "/hadabot/odom", 10);
+        "/hadabot/odom", 10);
 
     wheel_power_left_pub_ = this->create_publisher<std_msgs::msg::Float32>(
-      "/hadabot/wheel_power_left", 10);
+        "/hadabot/wheel_power_left", 10);
     wheel_power_right_pub_ = this->create_publisher<std_msgs::msg::Float32>(
-      "/hadabot/wheel_power_right", 10);
+        "/hadabot/wheel_power_right", 10);
 
     update_odometry_timer_ = this->create_wall_timer(
-      UPDATE_DT, std::bind(&HadabotController::update_odometry, this));
+        UPDATE_DT, std::bind(&HadabotController::update_odometry, this));
 
     publish_odometry_timer_ = this->create_wall_timer(
-      PUBLISH_DT, std::bind(&HadabotController::publish_odometry, this));
+        PUBLISH_DT, std::bind(&HadabotController::publish_odometry, this));
   }
 };
 
