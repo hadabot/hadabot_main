@@ -31,10 +31,11 @@ ros2 run hadabot_driver hadabot_controller
 
 The twist_cb(...) function implements the unicycle to differential drive equations.
 
+1. Using the left-side VSCode file explorer, go to hadabot_ws/src/haddabot_driver/src/hadabot_controller.cpp
 1. Set a breakpoint somewhere in the _hadabot_controller.cpp::HadabotController::twist_cb()_ function.
     1. In VSCode, just click to the left of the line number to set a breakpoint at that line. A red dot will appear.
 1. Hit F5 (or click upper left menu icon -> Run -> Start Debugging)
-1. Upon first run, in the __DEBUG CONSOLE__, you'll see the hadabot_controller "has exited with code 0".
+1. Upon first run, in the __DEBUG CONSOLE__, you'll see the hadabot_controller "has exited with code xxx".
     1. Click the __TERMINAL__ sub-window.
     1. Confirm on the terminal name on the right of the __TERMINAL__ top bar says "cppdbg: hadabot_controller". You should also see the error output "...cannot open shared object file: No such file or directory".
     1. In this "cppdbg: hadabot_controller" terminal type:
@@ -44,3 +45,4 @@ source hadabot_ws/install/setup.bash
 ```
 
 4. Hit F5 to start debugging again. This time, the ROS2 environment will be set up with linker path locations, etc..
+1. YOUR HADABOT WILL MOVE AS YOU STEP THRU THE CODE. So be careful of where it is, or unplug the Hadabot from it's battery to be safe.
