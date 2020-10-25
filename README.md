@@ -1,3 +1,5 @@
+(DEPRECATED) - Please visit www.hadabot.com for more up to date instructions on how to build.
+
 # To launch a ROS2 web-bash console
 
 1. [Install Docker](https://docs.docker.com/install/)
