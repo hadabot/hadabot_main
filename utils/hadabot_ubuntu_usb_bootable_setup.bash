@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# With a terminal from Ubuntu, run "wget -O hadabot_ubuntu_usb_bootable_setup.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_usb_bootable_setup.bash"
+# With a terminal from Ubuntu, run "wget -O hadabot_setup.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_usb_bootable_setup.bash"
 
 sudo add-apt-repository universe
 sudo apt-get update
@@ -42,11 +42,11 @@ echo "------------------"
 echo ""
 echo "We are ready for step 2 of the Hadabot Bootable USB setup."
 echo ""
-echo "1. Using a quality micro-USB cable, connect your ESP32 to your computer"
-echo "2. Fetch and execute the next setup script by typing the commands below - one at a time:"
+echo "1. Using a quality micro-USB cable, connect your ESP32 to your computer."
 echo ""
-echo "$ wget -O hadabot_setup_02.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_bootable_usb_setup_part_02.bash"
-echo "$ bash hadabot_setup_02.bash"
+echo "2. Once you have the ESP32 connected, execute the next setup script by typing the command:"
+echo ""
+echo "    $ bash hadabot_main/utils/hadabot_ubuntu_bootable_usb_setup_part_02.bash"
 echo ""
 
 # Login to another shell to activate dialout and docker permission group
