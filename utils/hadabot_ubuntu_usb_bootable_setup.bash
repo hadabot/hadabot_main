@@ -37,22 +37,17 @@ sudo usermod -aG dialout ubuntu
 # Clone the hadabot repo
 git clone https://github.com/hadabot/hadabot_main.git
 
-# Login again to another shell to activate dialout and docker permission group
-su ubuntu
-
-# Build the hadabot containers
-cd hadabot_main/docker
-echo "We will be building the Hadabot Docker containers. This may take around 30 min or so depending on your network speed..."
-docker-compose up -d
-
-# Instructions on how to get the ESP32 flashed
-cd ~
-echo "You are now read to flash the ESP32."
-echo "Connect your ESP32 with a quality micro-USB"
-echo "Type the following in your terminal below - one command at a time:"
 echo ""
-echo "$ cd hadabot_main/content/p7/firmware"
-echo "$ esptool.py --port /dev/ttyUSB0 erase_flash"
-echo "$ esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 ~/esp32-micropython.bin"
-echo "$ ampy --port /dev/ttyUSB0 run clean_firmware.py"
+echo "------------------"
+echo ""
+echo "We are ready for step 2 of the Hadabot Bootable USB setup."
+echo ""
+echo "1. Using a quality micro-USB cable, connect your ESP32 to your computer"
+echo "2. Fetch and execute the next setup script by typing the commands below - one at a time:"
+echo ""
+echo "$ wget -O hadabot_setup_02.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_bootable_usb_setup_part_02.bash"
+echo "$ bash hadabot_setup_02.bash"
+echo ""
 
+# Login to another shell to activate dialout and docker permission group
+su ubuntu
