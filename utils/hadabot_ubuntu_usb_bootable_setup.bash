@@ -2,6 +2,12 @@
 
 # With a terminal from Ubuntu, run "wget -O hadabot_setup.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_usb_bootable_setup.bash"
 
+# "Try Ubuntu" mounts 4gb to file location where docker lives. So we will create a symbolic link to a different location with more storage space
+sudo mkdir /var/log/var_lib_docker
+cd /var/lib
+sudo ln -s ../log/var_lib_docker docker
+cd ~
+
 sudo add-apt-repository universe
 sudo apt-get update
 
