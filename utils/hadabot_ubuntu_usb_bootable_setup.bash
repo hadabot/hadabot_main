@@ -21,6 +21,14 @@ sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 sudo usermod -aG docker ubuntu
 
+# "Try Ubuntu" does not like it when docker users aufs as the Docker storage driver
+# When using default aufs, "docker run hello-world" will cause a weird invalid arg aufs error.
+sudo cp /lib/systemd/system/docker.service /lib/systemd/system/docker.service.orig
+sed 's/ExecStart=\/usr\/bin\/dockerd -H/ExecStart=\/usr\/bin\/dockerd --storage-driver=devicemapper -H/g' /lib/systemd/system/docker.service.orig > docker.service
+sudo mv docker.service /lib/systemd/system/docker.service
+sudo systemctl daemon-reload
+sudo systemctl restart docker.service
+
 # Install docker-compose
 sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 sudo chmod +x /usr/local/bin/docker-compose
