@@ -50,10 +50,12 @@ sudo apt-get install -y python3-pip
 echo "-----"
 echo "Installing ESP32 tools..."
 echo "-----"
-echo "export PATH=$PATH:~/.local/bin" >> ~/.bashrc
+echo "export PATH=$PATH:${HOME}/.local/bin" >> ~/.bashrc
+export PATH=${PATH}:${HOME}/.local/bin
 pip3 install -U esptool adafruit-ampy
 wget -O esp32-micropython.bin https://micropython.org/resources/firmware/esp32-idf3-20200902-v1.13.bin
 sudo usermod -aG dialout ${USER}
+sudo chmod a+rw /dev/ttyUSB0
 
 # Clone the hadabot repo
 git clone https://github.com/hadabot/hadabot_main.git
@@ -72,5 +74,21 @@ echo ""
 echo "    $ bash hadabot_main/utils/hadabot_ubuntu_bootable_usb_setup_part_02.bash"
 echo ""
 
-# Login to another shell to activate dialout and docker permission group
-su ${USER}
+# Build the hadabot containers
+cd hadabot_main/docker
+echo "------"
+echo "We will be building the Hadabot Docker containers. This may take around 30 min or so depending on your network speed..."
+echo "------"
+sudo docker-compose up -d
+
+# Instructions on how to get the ESP32 flashed
+cd ~
+cd hadabot_main/content/p7/firmware
+esptool.py --port /dev/ttyUSB0 erase_flash
+esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 ~/esp32-micropython.bin
+ampy --port /dev/ttyUSB0 run clean_firmware.py
+ampy --port /dev/ttyUSB0 put uhadabot
+#ampy --port /dev/ttyUSB0 put boot.py
+
+# Open teleop instructions
+firefox https://www.hadabot.com/ros2-hadabot-teleop.html?step=compile-unicycle-ros2-code
