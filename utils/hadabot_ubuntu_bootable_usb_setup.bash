@@ -2,7 +2,7 @@
 
 # With a terminal from Ubuntu, run:
 # $ wget -O hadabot_setup.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_bootable_usb_setup.bash
-# $ ./hadabot_setup.bash
+# $ /bin/bash hadabot_setup.bash
 
 echo "-----"
 echo "Updating system first."
