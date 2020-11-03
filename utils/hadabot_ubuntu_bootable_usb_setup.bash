@@ -1,54 +1,72 @@
 #! /bin/bash
 
-# With a terminal from Ubuntu, run "wget -O hadabot_setup.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_usb_bootable_setup.bash"
+# With a terminal from Ubuntu, run:
+# $ wget -O hadabot_setup.bash https://raw.githubusercontent.com/hadabot/hadabot_main/master/utils/hadabot_ubuntu_bootable_usb_setup.bash
+# $ ./hadabot_setup.bash
 
 echo "-----"
-echo "Updating system first... you may need to enter your password for super user access to update the system."
+echo "Updating system first."
+echo "Don't go away! The update may take 5-15 minutes and we need you to stick around to help with setup."
+echo "Got it?"
+echo "[Press any key to continue]"
+read -s -n 1
+
 echo "-----"
+echo "You may need to enter your password for super user access to update the system."
 sudo add-apt-repository universe
 sudo apt-get update
 sudo apt-get upgrade -y
 
+# Set up the ESP32
+./hadabot_esp32_setup.bash
+
 # Install docker
-echo "-----"
-echo "Installing docker..."
-echo "-----"
-sudo apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg-agent \
-    software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-   $(lsb_release -cs) \
-   stable"
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-sudo usermod -aG docker ${USER}
+echo "----"
+echo "We will now be installing Docker and building the Hadabot Docker containers."
+echo ""
+echo "We may (or may not) need your system password again so stick around for a minute or so."
+echo ""
+echo "Once you see a stream of commands kick off, you are good to go get your coffee. This step will take a while (longer than 1 hour)."
+echo ""
+echo "Sound good?"
+echo "[Press any key to continue]"
+read -s -n 1
+./hadabot_docker_container_setup.bash
 
-# "Try Ubuntu" does not like it when docker users aufs as the Docker storage driver
-# When using default aufs, "docker run hello-world" will cause a weird invalid arg aufs error.
-#sudo cp /lib/systemd/system/docker.service /lib/systemd/system/docker.service.orig
-#sed 's/ExecStart=\/usr\/bin\/dockerd -H/ExecStart=\/usr\/bin\/dockerd --storage-driver=devicemapper -H/g' /lib/systemd/system/docker.service.orig > docker.service
-#sudo mv docker.service /lib/systemd/system/docker.service
-#sudo systemctl daemon-reload
-#sudo systemctl restart docker.service
+echo "----"
+echo "If there were no errors, then your setup is complete."
+echo ""
+echo "Let's power up your Hadabot Turtle, in the order below."
+echo ""
+echo "(Step 1) Power up the ESP32 - plug one of the red-battery-pack power wires to the 'female-ended power wire' for your ESP32 board."
+echo ""
+echo "(Step 2) Power up the motor controller - plug the other red-battery-pack power wire to the 'female-ended power wire' for your motor control board."
+echo ""
+echo "NOTE: The ESP32 needs to be powered up *before* the motor controller!"
+echo ""
+echo "Done powering up the Hadabot Turtle?"
+echo "[Press any key to continue]"
+read -s -n 1
 
-# Install docker-compose
-echo "-----"
-echo "Installing docker-compose..."
-echo "-----"
-sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Build the hadabot containers
-cd hadabot_main/docker
-echo "------"
-echo "We will be building the Hadabot Docker containers. This may take around 30 min or so depending on your network speed..."
-echo "------"
-sudo docker-compose up -d
+echo "----"
+echo "Reset your ESP32 by pressing/holding the 'EN' button for 2 seconds."
+echo ""
+echo "Done pressing/holding/releasing the 'EN' button on the ESP32?"
+echo "[Press any key to continue]"
+read -s -n 1
 
 # Open teleop instructions
+echo "----"
+echo "The ESP32 board's blue on-board LED should blink then stay lit if the board has managed to connect to your Wi-Fi and the Hadabot ROS 2 software stack."
+echo ""
+echo "Do you see the blue on-board LED lit solid (if not, email hi@hadabot.com and we'll help you troubleshoot)?"
+echo "[Press any key if the blue LED is lit, else Ctrl-C to exit]"
+read -s -n 1
+
+echo "----"
+echo "When you're ready, we'll open the Hadabot Teleop webpage for you to teleoperate your Hadabot Turtle robot!"
+echo ""
+echo "Ready?"
+echo "[Press any key to continue]"
+read -s -n 1
 firefox https://www.hadabot.com/ros2-hadabot-teleop.html?step=compile-unicycle-ros2-code
