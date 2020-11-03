@@ -16,8 +16,16 @@ echo "You may need to enter your password for super user access to update the sy
 sudo add-apt-repository universe
 sudo apt-get update
 sudo apt-get upgrade -y
+sudo apt-get install -y git
+
+# Clone the hadabot repo
+echo "Cloning Hadabot Github repo..."
+cd ~
+git clone https://github.com/hadabot/hadabot_main.git
+echo "Done cloning Hadabot Github repo."
 
 # Set up the ESP32
+cd ${HOME}/hadabot_main/utils
 ./hadabot_esp32_setup.bash
 
 # Install docker
@@ -31,6 +39,7 @@ echo ""
 echo "Sound good?"
 echo "[Press any key to continue]"
 read -s -n 1
+cd ${HOME}/hadabot_main/utils
 ./hadabot_docker_container_setup.bash
 
 echo "----"

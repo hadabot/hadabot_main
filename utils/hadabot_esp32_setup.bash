@@ -19,7 +19,7 @@ echo "[Press any key to continue]"
 read -s -n 1
 
 # Install necessary python components
-sudo apt-get install -y python3-pip net-tools git
+sudo apt-get install -y python3-pip net-tools
 
 # Install the tools needed to flash the ESP32
 echo "export PATH=$PATH:${HOME}/.local/bin" >> ~/.bashrc
@@ -48,13 +48,6 @@ echo "Sounds good?"
 echo "[Press any key to continue]"
 read -s -n 1
 esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash -z 0x1000 ${HOME}/esp32-micropython.bin
-
-# Clone the hadabot repo
-echo "Cloning Hadabot Github repo..."
-cd ~
-rm -rf hadabot_main
-git clone https://github.com/hadabot/hadabot_main.git
-echo "Done cloning Hadabot Github repo."
 
 # Flash the firmware
 cd ~
