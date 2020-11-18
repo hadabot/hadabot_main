@@ -48,7 +48,7 @@ class Controller:
     ###########################################################################
     def __init__(self, ros):
 
-        # Motor pings
+        # Motor pins
         self.pwm_pin_left = PWM(Pin(M_LEFT_PWM))
         self.pwm_pin_right = PWM(Pin(M_RIGHT_PWM))
 
@@ -59,6 +59,10 @@ class Controller:
         self.pwm_pin_right.duty(0)
         self.fr_pin_left.off()
         self.fr_pin_right.off()
+
+        # Motor direction (fwd/stop == 1.0, reverse == -1.0)
+        self.fr_left = 1.0
+        self.fr_right = 1.0
 
         # Encoder
         en_pin_left = Pin(EN_LEFT, Pin.IN)
@@ -74,7 +78,8 @@ class Controller:
 
         # Timer to poll encoders
         self.en_poll_timer = Timer(0)
-        self.en_poll_timer.init(period=10, mode=Timer.PERIODIC,
+        self.en_poll_timer.init(period=10,
+                                mode=Timer.PERIODIC,
                                 callback=self.irq_poll_en)
 
     ###########################################################################
@@ -83,7 +88,7 @@ class Controller:
             val = en.en_pin.value()
             if (val ^ en.prev_pin_val) == 1:
                 en.count += 1
-            en.prev_pin_val = val
+                en.prev_pin_val = val
 
     ###########################################################################
     def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin):
@@ -108,18 +113,20 @@ class Controller:
     def right_wheel_cb(self, wheel_power):
         self.turn_wheel(
             wheel_power["data"], self.pwm_pin_right, self.fr_pin_right)
+        self.fr_right = 1.0 if wheel_power["data"] >= 0.0 else -1.0
 
     ###########################################################################
     def left_wheel_cb(self, wheel_power):
         self.turn_wheel(
             wheel_power["data"], self.pwm_pin_left, self.fr_pin_left)
+        self.fr_left = 1.0 if wheel_power["data"] >= 0.0 else -1.0
 
     ###########################################################################
     def run_once(self):
-        state = machine.disable_irq()
+        # state = machine.disable_irq()
         count_left = self.en_left.count
         count_right = self.en_right.count
-        machine.enable_irq(state)
+        # machine.enable_irq(state)
 
         cur_ms = time.ticks_ms()
         time_delta_ms = time.ticks_diff(cur_ms, self.prev_ms)
@@ -129,13 +136,13 @@ class Controller:
         dcount_left = count_left - self.prev_count_left
         radians = 2 * math.pi * (dcount_left / self.TICKS_PER_REVOLUTION)
         radps_left = radians * per_second
-        self.en_left.publish_radps(radps_left)
+        self.en_left.publish_radps(radps_left * self.fr_left)
 
         # Right encoder
         dcount_right = count_right - self.prev_count_right
         radians = 2 * math.pi * (dcount_right / self.TICKS_PER_REVOLUTION)
         radps_right = radians * per_second
-        self.en_right.publish_radps(radps_right)
+        self.en_right.publish_radps(radps_right * self.fr_right)
 
         # Update previous sample
         self.prev_ms = cur_ms

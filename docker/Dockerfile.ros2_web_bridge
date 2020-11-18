@@ -2,8 +2,12 @@ ARG FROM_IMAGE=ros:foxy
 
 FROM $FROM_IMAGE
 
+ENV RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"
+
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y \
+        ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+        curl && \
     curl -sL https://deb.nodesource.com/setup_10.x -o nodesource_setup.sh && \
     /bin/bash nodesource_setup.sh && \
     apt-get install -y nodejs && \
