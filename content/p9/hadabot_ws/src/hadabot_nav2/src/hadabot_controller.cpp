@@ -133,8 +133,16 @@ private:
     float v = twist_msg->linear.x;
     float w = twist_msg->angular.z;
 
+    // v_l and v_r in radians per second
     auto v_r = ((2.0 * v) + (w * wheelbase_m_)) / (2 * wheel_radius_m_);
     auto v_l = ((2.0 * v) - (w * wheelbase_m_)) / (2 * wheel_radius_m_);
+
+    // RCLCPP_INFO(this->get_logger(), "Left %f - Right %f", v_l, v_r);
+
+    // Max radians per second for Hadabot wheels ~= 6 (almost one full rotation)
+    // Normalize btw -1 and 1.0
+    v_r = ((6.0 + v_r) / 6.0) - 1.0;
+    v_l = ((6.0 + v_l) / 6.0) - 1.0;
 
     std_msgs::msg::Float32 pow_r;
     std_msgs::msg::Float32 pow_l;
@@ -158,8 +166,8 @@ public:
     pose_->pose.pose.orientation.y = q.getY();
     pose_->pose.pose.orientation.z = q.getZ();
     pose_->pose.pose.orientation.w = q.getW();
-    pose_->pose.pose.position.x = 0.0;
-    pose_->pose.pose.position.y = 0.0;
+    pose_->pose.pose.position.x = 5.0;
+    pose_->pose.pose.position.y = 5.0;
     pose_->pose.pose.position.z = 0.0;
 
     odometry_pub_ = this->create_publisher<nav_msgs::msg::Odometry>(

@@ -60,9 +60,9 @@ class Controller:
         self.fr_pin_left.off()
         self.fr_pin_right.off()
 
-        # Motor direction (fwd/stop == 1.0, reverse == -1.0)
-        self.fr_left = 1.0
-        self.fr_right = 1.0
+        # Motor direction (fwd == 1.0, reverse == -1.0, stop == 0.0)
+        self.fr_left = 0.0
+        self.fr_right = 0.0
 
         # Encoder
         en_pin_left = Pin(EN_LEFT, Pin.IN)
@@ -91,15 +91,40 @@ class Controller:
                 en.prev_pin_val = val
 
     ###########################################################################
-    def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin):
+    def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin, prev_direction):
         factor = max(min(wheel_power_f32, 1.0), -1.0)
 
-        if False and wheel_power_f32 == 0.0:
-            if pwm_pin == self.pwm_pin_right:
-                self.en_right.count = 0
-            else:
-                self.en_left.count = 0
+        # The Hadabot wheels actually don't turn well below 0.5, so let's
+        # normalize between -1.0 and -0.5, 0.5 to 1.0
+        factor = factor * 0.5
+        factor = factor + 0.5 if factor > 0 else factor
+        factor = factor - 0.5 if factor < 0 else factor
 
+        # Overdrive motors to get them spinning, then back off to the
+        # speed we desire (hack for not having a PID controller)
+        dir_change_sleep_ms = 50
+        if prev_direction * factor == 0:
+            if factor > 0:
+                self._send_motor_signal(0.8, pwm_pin, fr_pin)
+                time.sleep_ms(dir_change_sleep_ms)
+            elif factor < 0:
+                self._send_motor_signal(-0.8, pwm_pin, fr_pin)
+                time.sleep_ms(dir_change_sleep_ms)
+        elif prev_direction * factor < 0:
+            # Changing direction - stop motor first
+            self._send_motor_signal(0.0, pwm_pin, fr_pin)
+            time.sleep_ms(dir_change_sleep_ms)
+
+            # Then overdrive in the opposite direction from
+            # the previous direction
+            self._send_motor_signal(-0.8 * prev_direction, pwm_pin, fr_pin)
+            time.sleep_ms(dir_change_sleep_ms)
+
+        # Send command
+        self._send_motor_signal(factor, pwm_pin, fr_pin)
+    ###########################################################################
+
+    def _send_motor_signal(self, factor, pwm_pin, fr_pin):
         if factor >= 0:
             # FR pin lo to go forward
             fr_pin.off()
@@ -112,14 +137,18 @@ class Controller:
     ###########################################################################
     def right_wheel_cb(self, wheel_power):
         self.turn_wheel(
-            wheel_power["data"], self.pwm_pin_right, self.fr_pin_right)
-        self.fr_right = 1.0 if wheel_power["data"] >= 0.0 else -1.0
+            wheel_power["data"], self.pwm_pin_right, self.fr_pin_right,
+            self.fr_right)
+        self.fr_right = -1.0 if wheel_power["data"] < 0.0 else 0.0
+        self.fr_right = 1.0 if wheel_power["data"] > 0.0 else self.fr_right
 
     ###########################################################################
     def left_wheel_cb(self, wheel_power):
         self.turn_wheel(
-            wheel_power["data"], self.pwm_pin_left, self.fr_pin_left)
-        self.fr_left = 1.0 if wheel_power["data"] >= 0.0 else -1.0
+            wheel_power["data"], self.pwm_pin_left, self.fr_pin_left,
+            self.fr_left)
+        self.fr_left = -1.0 if wheel_power["data"] < 0.0 else 0.0
+        self.fr_left = 1.0 if wheel_power["data"] >= 0.0 else self.fr_left
 
     ###########################################################################
     def run_once(self):
@@ -227,7 +256,7 @@ def main(argv):
             # logger.info("last_hb ms - {}".format(last_hb_ms))
 
             # Run the controller
-            if time.ticks_diff(cur_ms, last_controller_ms) > 500:
+            if time.ticks_diff(cur_ms, last_controller_ms) > 100:
                 controller.run_once()
                 last_controller_ms = cur_ms
 

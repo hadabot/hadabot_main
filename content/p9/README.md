@@ -36,3 +36,34 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
 1. Watch the Hadabot Turtle move to the goal pose.
     1. Each grid line in rviz is 1 meter.
 
+## Nav2
+
+To manually set goal
+```
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "
+{
+pose: {
+  header: {
+    stamp: {
+      sec: 1607032613,
+      nanosec: 0,
+	  },
+    frame_id: map
+    },
+  pose: {
+    position: {
+      x: 6.0,
+      y: 5.0,
+      z: 0.0
+      },
+    orientation: {
+      x: 0.0,
+      y: 0.0,
+      z: 0.0,
+      w: 1.0
+      }
+    }
+  }
+}
+"
+```
