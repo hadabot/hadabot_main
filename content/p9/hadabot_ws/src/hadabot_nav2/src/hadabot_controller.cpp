@@ -166,8 +166,8 @@ public:
     pose_->pose.pose.orientation.y = q.getY();
     pose_->pose.pose.orientation.z = q.getZ();
     pose_->pose.pose.orientation.w = q.getW();
-    pose_->pose.pose.position.x = 5.0;
-    pose_->pose.pose.position.y = 5.0;
+    pose_->pose.pose.position.x = 0.0;
+    pose_->pose.pose.position.y = 0.0;
     pose_->pose.pose.position.z = 0.0;
 
     odometry_pub_ = this->create_publisher<nav_msgs::msg::Odometry>(

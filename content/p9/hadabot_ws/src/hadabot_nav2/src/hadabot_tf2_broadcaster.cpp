@@ -42,6 +42,7 @@ private:
         base_link_tf.header.stamp = now;
         tf_broadcaster_->sendTransform(base_link_tf);
 
+        // Odom to Map frame
         odom_tf.transform.translation.x = 0.0;
         odom_tf.transform.translation.y = 0.0;
         odom_tf.transform.translation.z = 0.0;

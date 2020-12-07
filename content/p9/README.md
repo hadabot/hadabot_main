@@ -1,8 +1,67 @@
-# Run the Navigation2, tf2 with the Hadabot Turtle robot
+# Run the Navigation2 Go-To-Goal example with the Hadabot Turtle robot
 
-## Compile and run the code
+## 1. Prep your Hadabot Software Stack (in this browser-based VSCode)
 
-Follow these steps to compile the source code:
+Update the ROS 2, system packages:
+
+1. Open a terminal by clicking on the upper left menu bar icon -> Terminal -> New Terminal.
+1. In the terminal, type:
+
+```
+sudo apt-get update
+sudo apt-get upgrade -y
+```
+
+(The update might take a while...)
+
+-------
+
+## 2. Upload the firmware for this example to your Hadabot Turtle (on your HOST machine)
+
+All steps done on your __host__ machine:
+
+#### a. Set up the Turtle's ESP32 network configuration
+
+```
+$ cd hadabot_main/content/p9/firmware
+$ cp uhadabot/hadabot_config_template.json uhadabot/hb.json
+```
+
+Enter your network info by editing the uhadabot/hb.json file:
+
+1. ros2_web_bridge_ip_addr:
+    1. Enter the IP address of your host development system (wrapped with double-quotes since JSON only recognizes strings).
+1. network:
+    1. Enter the SSID and password of your network (also wrapped in double-quotes).
+
+Confirm the network settings:
+
+```
+$ cat uhadabot/hb.json
+```
+
+#### b. Flash the Turtle's ESP32
+
+1. Press the "Boot" button on the ESP32 board to disconnect from the ROS system.
+    1. The blue on-board LED should turn off.
+1. Unplug your Turtle's ESP32 and Motor Driver from the batteries.
+1. Using a quality micro-USB cable, plug the ESP32 to your development computer.
+1. Then run the following to upload the firmware:
+
+```
+$ ampy --port /dev/<the_esp32_usb_port> run clean_firmware.py
+$ ampy --port /dev/<the_esp32_usb_port> put uhadabot
+$ ampy --port /dev/<the_esp32_usb_port> put boot.py
+```
+
+__IMPORTANT__: you must FIRST run 'ampy --port XX put uhadabot', since boot.py will use files from the /uhadabot folder.
+
+--------
+--------
+
+## 3. Compile and run the ROS 2 code (in this browser-based VSCode)
+
+Follow these steps to compile the ROS 2 source code:
 
 1. Open a terminal by clicking on the upper left menu bar icon -> Terminal -> New Terminal.
 
@@ -11,7 +70,7 @@ Follow these steps to compile the source code:
 ```
 source /opt/ros/foxy/setup.bash
 cd hadabot_ws
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
+colcon build --symlink-install 
 ```
 
 3. Once the build completes, we need to open up a browser-based VNC window to kick off the application. Open a browser-based VNC environment via http://localhost:9124/
@@ -31,14 +90,17 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Debug
 
 1. In the rviz application:
     1. Click on "Navigation2 Goal" button (in the top main menu bar).
-    1. Click-n-hold somewhere in the white patch, drag to specify a direction, you should see a large green arrow appear. That is the goal pose - position and orientation which Navigation2 will drive our turtlesim towards.
+    1. Click-n-hold somewhere in the white patch, drag to specify a direction, you should see a large green arrow appear. That is the goal pose - position and orientation which Navigation2 will drive our Hadabot Turtle towards the goal.
 
 1. Watch the Hadabot Turtle move to the goal pose.
     1. Each grid line in rviz is 1 meter.
 
-## Nav2
+-----------
+-----------
 
-To manually set goal
+## Misc
+
+To send Nav2 goal using the ros2 cli
 ```
 ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "
 {
