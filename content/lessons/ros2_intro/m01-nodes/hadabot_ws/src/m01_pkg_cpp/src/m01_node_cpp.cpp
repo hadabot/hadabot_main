@@ -7,14 +7,13 @@
 
 using namespace std::chrono_literals;
 
-class IntroNode : public rclcpp::Node
+class MyROSNode : public rclcpp::Node
 {
 public:
-  IntroNode()
+  MyROSNode()
       : Node("intro_ros2_node_cpp"), count_(0)
   {
-    timer_ = this->create_wall_timer(
-        500ms, std::bind(&IntroNode::timer_callback, this));
+    // Add timer code here
   }
 
 private:
@@ -30,7 +29,7 @@ private:
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<IntroNode>());
+  rclcpp::spin(std::make_shared<MyROSNode>());
   rclcpp::shutdown();
   return 0;
 }

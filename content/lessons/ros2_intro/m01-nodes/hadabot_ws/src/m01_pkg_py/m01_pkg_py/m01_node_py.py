@@ -2,12 +2,14 @@ import rclpy
 from rclpy.node import Node
 
 
-class IntroNode(Node):
+class MyROSNode(Node):
 
     def __init__(self):
         super().__init__('intro_ros2_node_py')
-        timer_period = 0.5  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+
+        timer_period_in_sec = 1.0
+        self.timer = self.create_timer(
+            timer_period_in_sec, self.timer_callback)
         self.i = 0
 
     def timer_callback(self):
@@ -19,11 +21,11 @@ class IntroNode(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    intro_node = IntroNode()
+    my_ros_node = MyROSNode()
 
-    rclpy.spin(intro_node)
+    rclpy.spin(my_ros_node)
 
-    intro_node.destroy_node()
+    my_ros_node.destroy_node()
     rclpy.shutdown()
 
 
