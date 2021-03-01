@@ -7,10 +7,8 @@ class MyROSNode(Node):
     def __init__(self):
         super().__init__('intro_ros2_node_py')
 
-        timer_period_in_sec = 1.0
-        self.timer = self.create_timer(
-            timer_period_in_sec, self.timer_callback)
-        self.i = 0
+        # Add timer callback code below
+        pass
 
     def timer_callback(self):
         self.get_logger().info(

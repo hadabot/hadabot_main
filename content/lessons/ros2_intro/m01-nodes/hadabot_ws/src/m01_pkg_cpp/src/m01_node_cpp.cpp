@@ -29,7 +29,8 @@ private:
 int main(int argc, char *argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<MyROSNode>());
+  auto my_ros_node = std::make_shared<MyROSNode>();
+  rclcpp::spin(my_ros_node);
   rclcpp::shutdown();
   return 0;
 }
