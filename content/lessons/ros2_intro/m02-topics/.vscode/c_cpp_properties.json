@@ -6,7 +6,7 @@
                 "limitSymbolsToIncludedHeaders": true
             },
             "includePath": [
-                "/home/hadabot/hadabot_main/content/lessons/ros2_intro/m01-nodes/hadabot_ws/src/m01_pkg_cpp/include/**",
+                "/home/hadabot/hadabot_main/content/lessons/ros2_intro/m02-topics/hadabot_ws/src/m02_pkg_cpp/include/**",
                 "/usr/include/**",
                 "/opt/ros/**"
             ],
