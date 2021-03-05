@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/hadabot/hadabot_main/content/lessons/ros2_intro/m03-launch-files/hadabot_ws/src/m03_pkg_cpp/include/**",
+                "/usr/include/**",
+                "/opt/ros/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
