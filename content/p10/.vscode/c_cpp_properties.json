@@ -6,7 +6,7 @@
                 "limitSymbolsToIncludedHeaders": true
             },
             "includePath": [
-                "/home/hadabot/hadabot_main/content/p8/hadabot_ws/src/hadabot_bringup/include/**",
+                "/home/hadabot/hadabot_main/content/p10/hadabot_ws/src/hadabot_bringup/include/**",
                 "/usr/include/**",
                 "/opt/ros/**"
             ],

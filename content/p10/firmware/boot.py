@@ -12,12 +12,29 @@ import time
 CONFIG_FILE = "hb.json"
 CONFIG = None
 
+PIN_CONFIG = {
+    "button": {"boot": 0},
+    "led": {"status": 2},  # 5 - p4r
+    "power": {"sensors": 27},
+    "i2c": {"scl": 22, "sda": 21},
+    "left": {
+        "motor": {"pwm": 18, "fr": 19},
+        "encoder": {
+            "a": 15, "b": 39,
+            "ppr": 1080  # 1:90 * 12 -- 1:45 * 3
+        }
+    },
+    "right": {
+        "motor": {"pwm": 13, "fr": 14},
+        "encoder": {
+            "a": 4, "b": 25,
+            "ppr": 1080
+        }
+    }
+}
 
-BUILTIN_LED = 5  # LED 1
 
 ###############################################################################
-
-
 def do_install_requirements():
     try:
         import logging  # noqa
@@ -38,7 +55,7 @@ def do_start_network():
             "then re-upload the file to the ESP32 board.".format(
                 CONFIG_FILE))
 
-    led_pin = machine.Pin(BUILTIN_LED, machine.Pin.OUT)
+    led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
     if not sta_if.isconnected():
         print('Connecting to network {}...'.format(CONFIG["network"]["ssid"]))
         sta_if.active(True)
@@ -59,7 +76,7 @@ def do_start_network():
 
 ###############################################################################
 def do_read_config():
-    global CONFIG
+    global CONFIG, PIN_CONFIG
     global CONFIG_FILE
 
     if CONFIG_FILE in os.listdir():
@@ -71,6 +88,18 @@ def do_read_config():
             r = f.read()
         CONFIG = json.loads(c)
         f.close()
+
+        # LED?
+        try:
+            led_gpio = CONFIG["pin_config"]["led"]["status"]
+            PIN_CONFIG["led"]["status"] = led_gpio
+
+            # Turn off core LED
+            led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
+            led_pin.off()
+        except Exception:
+            pass
+
     else:
         raise Exception("Could not find a {} config file".format(CONFIG_FILE))
 
@@ -87,8 +116,21 @@ def do_setup():
 
 ###############################################################################
 def do_initial_prep():
+    # Turn off all motors
+    if True:
+        for motor_pin in [
+                PIN_CONFIG["left"]["motor"]["pwm"],
+                PIN_CONFIG["right"]["motor"]["pwm"]]:
+            pmotor = machine.PWM(machine.Pin(motor_pin))
+            pmotor.duty(0)
+        for motor_pin in [
+                PIN_CONFIG["left"]["motor"]["fr"],
+                PIN_CONFIG["right"]["motor"]["fr"]]:
+            pmotor = machine.Pin(motor_pin, machine.Pin.OUT)
+            pmotor.off()
+
     # Turn off core LED
-    led_pin = machine.Pin(BUILTIN_LED, machine.Pin.OUT)
+    led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
     led_pin.off()
 
     # Need to move some files over to root directory

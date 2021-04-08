@@ -1,5 +1,5 @@
 from uhadabot.uroslibpy import Ros, Topic, Message
-from boot import CONFIG
+from boot import CONFIG, PIN_CONFIG
 import ssd1306
 from machine import Pin, PWM, I2C
 import math
@@ -9,18 +9,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-BUILTIN_LED = 5  # LED 1
 
+###############################################################################
+class ssd1306_stub:
+    def __init__(self):
+        pass
 
-M_LEFT_PWM = 18
-M_RIGHT_PWM = 13
-M_LEFT_FR = 19
-M_RIGHT_FR = 14
+    def fill(*args, **kwargs):
+        pass
 
-EN_LEFT = 4  # LED 2
-EN_RIGHT = 15  # LED 4
+    def text(*args, **kwargs):
+        pass
 
-SENSOR_DISPLAY_POWER = 27
+    def show(*args, **kwargs):
+        pass
 
 
 ###############################################################################
@@ -51,17 +53,17 @@ class Encoder:
 
 ###############################################################################
 class Controller:
-    TICKS_PER_REVOLUTION = 135
+    TICKS_PER_REVOLUTION = 1080  # 12 ppr (1:90) --- 135 3ppr (1:45)
 
     ###########################################################################
     def __init__(self, ros):
 
         # Motor pins
-        self.pwm_pin_left = PWM(Pin(M_LEFT_PWM))
-        self.pwm_pin_right = PWM(Pin(M_RIGHT_PWM))
+        self.pwm_pin_left = PWM(Pin(PIN_CONFIG["left"]["motor"]["pwm"]))
+        self.pwm_pin_right = PWM(Pin(PIN_CONFIG["right"]["motor"]["pwm"]))
 
-        self.fr_pin_left = Pin(M_LEFT_FR, Pin.OUT)
-        self.fr_pin_right = Pin(M_RIGHT_FR, Pin.OUT)
+        self.fr_pin_left = Pin(PIN_CONFIG["left"]["motor"]["fr"], Pin.OUT)
+        self.fr_pin_right = Pin(PIN_CONFIG["right"]["motor"]["fr"], Pin.OUT)
 
         self.pwm_pin_left.duty(0)
         self.pwm_pin_right.duty(0)
@@ -73,8 +75,8 @@ class Controller:
         self.fr_right = 0.0
 
         # Encoder
-        en_pin_left = Pin(EN_LEFT, Pin.IN)
-        en_pin_right = Pin(EN_RIGHT, Pin.IN)
+        en_pin_left = Pin(PIN_CONFIG["left"]["encoder"]["a"], Pin.IN)
+        en_pin_right = Pin(PIN_CONFIG["right"]["encoder"]["a"], Pin.IN)
 
         self.en_left = Encoder(ros, "left", en_pin_left)
         self.en_right = Encoder(ros, "right", en_pin_right)
@@ -98,9 +100,10 @@ class Controller:
 
         # The Hadabot wheels actually don't turn well below 0.5, so let's
         # normalize between -1.0 and -0.5, 0.5 to 1.0
-        factor = factor * 0.5
-        factor = factor + 0.5 if factor > 0 else factor
-        factor = factor - 0.5 if factor < 0 else factor
+        if False:
+            factor = factor * 0.5
+            factor = factor + 0.5 if factor > 0 else factor
+            factor = factor - 0.5 if factor < 0 else factor
 
         # Overdrive motors to get them spinning, then back off to the
         # speed we desire (hack for not having a PID controller)
@@ -124,8 +127,8 @@ class Controller:
 
         # Send command
         self._send_motor_signal(factor, pwm_pin, fr_pin)
-    ###########################################################################
 
+    ###########################################################################
     def _send_motor_signal(self, factor, pwm_pin, fr_pin):
         if factor >= 0:
             # FR pin lo to go forward
@@ -150,7 +153,7 @@ class Controller:
             wheel_power["data"], self.pwm_pin_left, self.fr_pin_left,
             self.fr_left)
         self.fr_left = -1.0 if wheel_power["data"] < 0.0 else 0.0
-        self.fr_left = 1.0 if wheel_power["data"] >= 0.0 else self.fr_left
+        self.fr_left = 1.0 if wheel_power["data"] > 0.0 else self.fr_left
 
     ###########################################################################
     def run_once(self):
@@ -195,7 +198,7 @@ class Controller:
 
 ###############################################################################
 def blink_led(ntimes, end_off):
-    builtin_led = Pin(BUILTIN_LED, Pin.OUT)
+    builtin_led = Pin(PIN_CONFIG["led"]["status"], Pin.OUT)
 
     # Start off
     builtin_led.off()
@@ -223,20 +226,26 @@ def main(argv):
 
     try:
         # Start sensors first since it takes some time to power up
-        p_sensor_display_power = Pin(SENSOR_DISPLAY_POWER, Pin.OUT)
+        p_sensor_display_power = Pin(PIN_CONFIG["power"]["sensors"], Pin.OUT)
         p_sensor_display_power.on()
 
         # Setup ROS
         hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
-        boot_button = Pin(0, Pin.IN)
-        builtin_led = Pin(BUILTIN_LED, Pin.OUT)
+        boot_button = Pin(PIN_CONFIG["button"]["boot"], Pin.IN)
+        builtin_led = Pin(PIN_CONFIG["led"]["status"], Pin.OUT)
         ros = Ros(CONFIG["ros2_web_bridge_ip_addr"])
 
         # Set up OLED
-        i2c = I2C(scl=Pin(22), sda=Pin(21))
-        oled_width = 128
-        oled_height = 64
-        oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
+        oled = None
+        try:
+            i2c = I2C(scl=Pin(PIN_CONFIG["i2c"]["scl"]),
+                      sda=Pin(PIN_CONFIG["i2c"]["sda"]))
+            oled_width = 128
+            oled_height = 64
+            oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
+        except Exception:
+            logger.info("Could not find OLED on I2C")
+            oled = ssd1306_stub()
 
         # Write to OLED
         oled.fill(0)
