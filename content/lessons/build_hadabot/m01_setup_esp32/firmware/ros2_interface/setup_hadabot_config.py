@@ -1,0 +1,1 @@
+../../../../../../firmware/utils/setup_hadabot_config.py

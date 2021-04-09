@@ -1,0 +1,1 @@
+../../../../../../firmware/clean_firmware.py
