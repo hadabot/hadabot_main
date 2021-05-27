@@ -13,13 +13,13 @@ RUN apt-get update && \
     apt-get install -y nodejs && \
     git clone https://github.com/RobotWebTools/ros2-web-bridge.git && \
     cd ros2-web-bridge && \
-    git checkout 0.3.0 -b rel_branch
+    git checkout 0.3.1 -b rel_branch
 
 WORKDIR /ros2-web-bridge
 
 # rclnodejs 0.19 and later works only on Galactic, not Foxy
 RUN /bin/bash -c 'source "/opt/ros/$ROS_DISTRO/setup.bash"; \
-    echo `export`; cd /ros2-web-bridge; npm install rclnodejs@0.15.2; npm install'
+    echo `export`; cd /ros2-web-bridge; npm install rclnodejs@0.18.2; npm install'
 
 ENTRYPOINT ["/ros_entrypoint.sh"]
 
