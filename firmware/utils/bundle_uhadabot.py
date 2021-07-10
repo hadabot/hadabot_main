@@ -14,9 +14,13 @@ def zip_file(in_file, to_f):
     f.close()
 
 
-def make_tarfile(output_filename, source_dir):
+def make_tarfile(output_filename, source_dir_list):
     with tarfile.open(output_filename, "w") as tar:
-        tar.add(source_dir, arcname=os.path.basename(source_dir))
+        for source_dir in source_dir_list:
+            try:
+                tar.add(source_dir, arcname=os.path.basename(source_dir))
+            except:
+                print(f"Could not find/bundle '{source_dir}'")
 
     hbz_fn = output_filename.split(".")[0]
     zip_file(output_filename, f"{hbz_fn}.hbz")
@@ -24,4 +28,4 @@ def make_tarfile(output_filename, source_dir):
 
 
 if __name__ == "__main__":
-    make_tarfile("uhadabot.tar", "uhadabot")
+    make_tarfile("uhadabot.tar", ["uhadabot", "lib"])
