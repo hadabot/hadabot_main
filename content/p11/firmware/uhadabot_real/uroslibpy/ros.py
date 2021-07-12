@@ -3,7 +3,6 @@
 from .uwebsockets import client
 import json
 import logging
-import time
 
 
 logger = logging.getLogger(__name__)
@@ -25,9 +24,6 @@ class Ros:
         self._event_callbacks = {}
 
         self.connect()
-
-        # Last websocket ping / pong packet sent - so connection doesn't close
-        self._ws_last_ping_ms = time.ticks_ms() 
 
     ###########################################################################
     @property
@@ -95,12 +91,6 @@ class Ros:
         if self._ws_blocking:
             self._ws.setblocking(0)
             self._ws_blocking = False
-
-        # Send ping every so often
-        cur_ms = time.ticks_ms()
-        if time.ticks_diff(cur_ms, self._ws_last_ping_ms) > 1000:
-            self._ws.send_ping()
-            self._ws_last_ping_ms = cur_ms
 
         # Get any responses from server
         rval = self._ws.recv()
