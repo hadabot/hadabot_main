@@ -242,18 +242,22 @@ class Hadabot:
             self.controller = Controller(self.ros)
 
             # Subscribe/publish to ping/ping_ack
-            self.ping_string_topic = Topic(
-                self.ros, "hadabot/ping_string", "std_msgs/String")
-            self.ping_string_topic.subscribe(self.ping_string_cb)
-            self.ping_string_ack_topic = Topic(self.ros,
-                                               "hadabot/ping_string_ack",
-                                               "std_msgs/String")
-            self.ping_f32_topic = Topic(
-                self.ros, "hadabot/ping_f32", "std_msgs/Float32")
-            self.ping_f32_topic.subscribe(self.ping_f32_cb)
-            self.ping_f32_ack_topic = Topic(self.ros,
-                                            "hadabot/ping_f32_ack",
-                                            "std_msgs/Float32")
+            self.ping_inertia_stamped_topic = Topic(
+                self.ros, "hadabot/ping_inertia_stamped",
+                "geometry_msgs/InertiaStamped")
+            self.ping_inertia_stamped_topic.subscribe(
+                self.ping_inertia_stamped_cb)
+            self.ping_inertia_stamped_ack_topic = Topic(
+                self.ros, "hadabot/ping_inertia_stamped_ack",
+                "geometry_msgs/InertiaStamped")
+            self.ping_time_reference_topic = Topic(
+                self.ros, "hadabot/ping_time_reference",
+                "sensor_msgs/TimeReference")
+            self.ping_time_reference_topic.subscribe(
+                self.ping_time_reference_cb)
+            self.ping_time_reference_ack_topic = Topic(
+                self.ros, "hadabot/ping_time_reference_ack",
+                "sensor_msgs/TimeReference")
 
             # Subscribe to blink led
             self.blink_led_sub_topic = Topic(
@@ -294,15 +298,13 @@ class Hadabot:
         self.shutdown()
 
     ###########################################################################
-    def ping_f32_cb(self, msg):
-        msg_data = float(msg["data"])
-        self.ping_f32_ack_topic.publish(Message({"data": msg_data}))
+    def ping_time_reference_cb(self, msg):
+        self.ping_time_reference_ack_topic.publish(Message(msg))
         self.last_hb_ms = time.ticks_ms()
 
     ###########################################################################
-    def ping_string_cb(self, msg):
-        msg_data = msg["data"]
-        self.ping_string_ack_topic.publish(Message(msg_data))
+    def ping_inertia_stamped_cb(self, msg):
+        self.ping_inertia_stamped_ack_topic.publish(Message(msg))
         self.last_hb_ms = time.ticks_ms()
 
     ###########################################################################
