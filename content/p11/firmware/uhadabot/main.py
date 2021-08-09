@@ -30,7 +30,7 @@ class ssd1306_stub:
 ###############################################################################
 class Encoder:
 
-    def __init__(self, ros, name, pin):
+    def __init__(self, name, pin):
         self.name = name
 
         self.en_pin = pin
@@ -40,17 +40,52 @@ class Encoder:
         # Encoder interrupts
         self.en_pin.irq(trigger=Pin.IRQ_RISING, handler=self.en_cb)
 
-        self.ros = ros
-        self.ros_pub = Topic(
-            ros, "hadabot/wheel_radps_{}".format(self.name),
-            "std_msgs/Float32")
-
     def en_cb(self, pin):
         self.count += 1
 
-    def publish_radps(self, radps):
+
+###############################################################################
+class EncoderSet:
+    def __init__(self, ros, name_pin_tuple_list):
+
+        # Initial radps message
+        dim_label = ""
+        self.ros_radps_message_json = {
+            "layout": {
+                "dim": [{
+                    "label": dim_label,
+                    "size": len(name_pin_tuple_list),
+                    "stride": len(name_pin_tuple_list)
+                }],
+                "data_offset": 0,
+            },
+            "data": [0.0] * len(name_pin_tuple_list)
+        }
+
+        # List of encoders
+        self.encoder_list = []
+        for name_pin in name_pin_tuple_list:
+            # Create encoder object
+            self.encoder_list.append(Encoder(name_pin[0], name_pin[1]))
+            dim_label += name_pin[0] + "_"
+
+        # Update multi array dim label
+        self.ros_radps_message_json["layout"]["dim"][0]["label"] = dim_label
+
+        self.ros = ros
+        self.ros_pub = Topic(
+            ros, "hadabot/wheel_radps",
+            "std_msgs/Float32MultiArray")
+
+    def publish_radps(self, radps_list):
+        for idx, radps in enumerate(radps_list):
+            self.ros_radps_message_json["data"][idx] = radps
+
         # logger.info("Encoder publish {}".format(self.name))
-        self.ros_pub.publish(Message({"data": radps}))
+        self.ros_pub.publish(Message(self.ros_radps_message_json))
+
+    def get_count(self, channel_idx):
+        return self.encoder_list[channel_idx].count
 
 
 ###############################################################################
@@ -79,9 +114,8 @@ class Controller:
         # Encoder
         en_pin_left = Pin(PIN_CONFIG["left"]["encoder"]["a"], Pin.IN)
         en_pin_right = Pin(PIN_CONFIG["right"]["encoder"]["a"], Pin.IN)
-
-        self.en_left = Encoder(ros, "left", en_pin_left)
-        self.en_right = Encoder(ros, "right", en_pin_right)
+        self.en_set = EncoderSet(
+            ros, [("left", en_pin_left), ("right", en_pin_right)])
 
         # Encoder samples
         self.prev_count_left = 0
@@ -109,23 +143,24 @@ class Controller:
 
         # Overdrive motors to get them spinning, then back off to the
         # speed we desire (hack for not having a PID controller)
-        dir_change_sleep_ms = 50
-        if prev_direction * factor == 0:
-            if factor > 0:
-                self._send_motor_signal(0.8, pwm_pin, fr_pin)
+        if False:
+            dir_change_sleep_ms = 50
+            if prev_direction * factor == 0:
+                if factor > 0:
+                    self._send_motor_signal(0.8, pwm_pin, fr_pin)
+                    time.sleep_ms(dir_change_sleep_ms)
+                elif factor < 0:
+                    self._send_motor_signal(-0.8, pwm_pin, fr_pin)
+                    time.sleep_ms(dir_change_sleep_ms)
+            elif prev_direction * factor < 0:
+                # Changing direction - stop motor first
+                self._send_motor_signal(0.0, pwm_pin, fr_pin)
                 time.sleep_ms(dir_change_sleep_ms)
-            elif factor < 0:
-                self._send_motor_signal(-0.8, pwm_pin, fr_pin)
-                time.sleep_ms(dir_change_sleep_ms)
-        elif prev_direction * factor < 0:
-            # Changing direction - stop motor first
-            self._send_motor_signal(0.0, pwm_pin, fr_pin)
-            time.sleep_ms(dir_change_sleep_ms)
 
-            # Then overdrive in the opposite direction from
-            # the previous direction
-            self._send_motor_signal(-0.8 * prev_direction, pwm_pin, fr_pin)
-            time.sleep_ms(dir_change_sleep_ms)
+                # Then overdrive in the opposite direction from
+                # the previous direction
+                self._send_motor_signal(-0.8 * prev_direction, pwm_pin, fr_pin)
+                time.sleep_ms(dir_change_sleep_ms)
 
         # Send command
         self._send_motor_signal(factor, pwm_pin, fr_pin)
@@ -160,8 +195,8 @@ class Controller:
     ###########################################################################
     def run_once(self):
         # state = machine.disable_irq()
-        count_left = self.en_left.count
-        count_right = self.en_right.count
+        count_left = self.en_set.get_count(0)
+        count_right = self.en_set.get_count(1)
         # machine.enable_irq(state)
 
         cur_ms = time.ticks_ms()
@@ -171,14 +206,15 @@ class Controller:
         # Left encoder
         dcount_left = count_left - self.prev_count_left
         radians = 2 * math.pi * (dcount_left / self.TICKS_PER_REVOLUTION)
-        radps_left = radians * per_second
-        self.en_left.publish_radps(radps_left * self.fr_left)
+        radps_left = radians * per_second * self.fr_left
 
         # Right encoder
         dcount_right = count_right - self.prev_count_right
         radians = 2 * math.pi * (dcount_right / self.TICKS_PER_REVOLUTION)
-        radps_right = radians * per_second
-        self.en_right.publish_radps(radps_right * self.fr_right)
+        radps_right = radians * per_second * self.fr_right
+
+        # Publish radps
+        self.en_set.publish_radps([radps_left, radps_right])
 
         # Update previous sample
         self.prev_ms = cur_ms
@@ -360,7 +396,7 @@ class Hadabot:
             if time.ticks_diff(cur_ms, self.last_hb_ms) > 5000:
                 # logger.info("Encoder left - {}".format(en_count_left))
                 # logger.info("Encoder right - {}".format(en_count_right))
-                #self.log_info.publish(Message(
+                # self.log_info.publish(Message(
                 #    "Hadabot heartbeat - IP {}".format(
                 #        self.hadabot_ip_address)))
                 self.log_info.publish(Message(str(cur_ms)))
