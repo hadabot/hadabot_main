@@ -5,6 +5,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32.hpp"
+#include "std_msgs/msg/float32_multi_array.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "tf2/LinearMath/Quaternion.h"
@@ -13,26 +14,29 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
+#define PUBLISH_DT 100ms
+
+#define RUN_MODE_UPDATE_DT 1000ms
 typedef enum
 {
-  LEFT,
-  RIGHT
-} HBSide;
-
-#define UPDATE_DT 100ms
-#define PUBLISH_DT 500ms
+  rm_go = 1,
+  rm_stop01 = 2,
+} RunMode;
 
 #define PI 3.14159265
 
 class HadabotController : public rclcpp::Node
 {
 private:
+  RunMode run_mode_;
+  rclcpp::TimerBase::SharedPtr update_run_mode_timer_;
+
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr wheel_power_right_pub_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr wheel_power_left_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odometry_pub_;
 
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr radps_left_sub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr radps_right_sub_;
+  rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr radps_sub_;
+  rclcpp::Time prev_odom_update_time_;
 
   rclcpp::TimerBase::SharedPtr update_odometry_timer_;
   rclcpp::TimerBase::SharedPtr publish_odometry_timer_;
@@ -48,41 +52,22 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;
 
   /***************************************************************************/
-  void wheel_radps(
-      const std_msgs::msg::Float32::SharedPtr msg, HBSide which_side)
+  void wheel_radps_cb(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
   {
-    std::string the_side = which_side == HBSide::LEFT ? "left" : "right";
-
-    switch (which_side)
-    {
-    case HBSide::LEFT:
-      wheel_radps_left_ = msg->data;
-      break;
-
-    case HBSide::RIGHT:
-      wheel_radps_right_ = msg->data;
-      break;
-    }
-  }
-
-  /***************************************************************************/
-  void wheel_radps_left_cb(const std_msgs::msg::Float32::SharedPtr msg)
-  {
-    this->wheel_radps(msg, HBSide::LEFT);
-  }
-
-  /***************************************************************************/
-  void wheel_radps_right_cb(const std_msgs::msg::Float32::SharedPtr msg)
-  {
-    this->wheel_radps(msg, HBSide::RIGHT);
+    this->wheel_radps_left_ = msg->data[0];
+    this->wheel_radps_right_ = msg->data[1];
+    this->update_odometry();
   }
 
   /***************************************************************************/
   void update_odometry()
   {
     // Get the time delta since last update
-    auto dt_ms = UPDATE_DT;
-    auto dt_s = dt_ms.count() / 1000.0;
+    auto time_now = this->now();
+    double dt_s = (time_now - this->prev_odom_update_time_).seconds();
+
+    // Update previous update time
+    this->prev_odom_update_time_ = time_now;
 
     // Compute distance traveled for each wheel
     float d_left_m = wheel_radps_left_ * dt_s * wheel_radius_m_;
@@ -130,6 +115,11 @@ private:
   /***************************************************************************/
   void twist_cb(const geometry_msgs::msg::Twist::SharedPtr twist_msg)
   {
+    if (this->run_mode_ != rm_go)
+    {
+      return;
+    }
+
     float v = twist_msg->linear.x;
     float w = twist_msg->angular.z;
 
@@ -149,14 +139,50 @@ private:
     pow_r.data = std::min(std::max(v_r, -1.0), 1.0);
     pow_l.data = std::min(std::max(v_l, -1.0), 1.0);
 
+    // Cheap motors don't spin well so just max speed fwd or back
+    auto av_r = abs(pow_r.data);
+    auto av_l = abs(pow_l.data);
+    pow_r.data = (av_r > 0.8) ? av_r : ((av_r > 0.0) ? 0.8 : 0.0);
+    pow_r.data = (v_r < 0.0) ? pow_r.data * -1.0 : pow_r.data;
+    pow_l.data = (av_l > 0.8) ? av_l : ((av_l > 0.0) ? 0.8 : 0.0);
+    pow_l.data = (v_l < 0.0) ? pow_l.data * -1.0 : pow_l.data;
+    //pow_r.data = (v_r > 0.0) ? 1.0 : ((v_r < 0.0) ? -1.0 : 0.0);
+    //pow_l.data = (v_l > 0.0) ? 1.0 : ((v_l < 0.0) ? -1.0 : 0.0);
+
     wheel_power_left_pub_->publish(pow_l);
     wheel_power_right_pub_->publish(pow_r);
+  }
+
+  /***************************************************************************/
+  void update_run_mode_cb()
+  {
+    std_msgs::msg::Float32 pow_zero;
+    switch (this->run_mode_)
+    {
+    case rm_go:
+      pow_zero.data = 0.0;
+      wheel_power_left_pub_->publish(pow_zero);
+      wheel_power_right_pub_->publish(pow_zero);
+      this->run_mode_ = rm_stop01;
+      break;
+    case rm_stop01:
+      this->run_mode_ = rm_go;
+      break;
+    default:
+      break;
+    }
   }
 
 public:
   HadabotController() : Node("hadabot_controller"), wheel_radius_m_(0.035), wheelbase_m_(0.14), wheel_radps_left_(0.0), wheel_radps_right_(0.0)
   {
     RCLCPP_INFO(this->get_logger(), "Starting Hadabot Controller");
+
+    // Init run mode
+    run_mode_ = rm_go;
+    update_run_mode_timer_ = this->create_wall_timer(
+        RUN_MODE_UPDATE_DT,
+        std::bind(&HadabotController::update_run_mode_cb, this));
 
     // Initialize pose
     pose_ = std::make_shared<nav_msgs::msg::Odometry>();
@@ -170,6 +196,9 @@ public:
     pose_->pose.pose.position.y = 0.0;
     pose_->pose.pose.position.z = 0.0;
 
+    // Current time
+    this->prev_odom_update_time_ = this->now();
+
     odometry_pub_ = this->create_publisher<nav_msgs::msg::Odometry>(
         "/hadabot/odom", 10);
 
@@ -177,21 +206,14 @@ public:
         "/hadabot/cmd_vel", 10,
         std::bind(&HadabotController::twist_cb, this, _1));
 
-    radps_left_sub_ = this->create_subscription<std_msgs::msg::Float32>(
-        "/hadabot/wheel_radps_left", 10,
-        std::bind(&HadabotController::wheel_radps_left_cb, this, _1));
-
-    radps_right_sub_ = this->create_subscription<std_msgs::msg::Float32>(
-        "/hadabot/wheel_radps_right", 10,
-        std::bind(&HadabotController::wheel_radps_right_cb, this, _1));
+    radps_sub_ = this->create_subscription<std_msgs::msg::Float32MultiArray>(
+        "/hadabot/wheel_radps", 10,
+        std::bind(&HadabotController::wheel_radps_cb, this, _1));
 
     wheel_power_left_pub_ = this->create_publisher<std_msgs::msg::Float32>(
         "/hadabot/wheel_power_left", 10);
     wheel_power_right_pub_ = this->create_publisher<std_msgs::msg::Float32>(
         "/hadabot/wheel_power_right", 10);
-
-    update_odometry_timer_ = this->create_wall_timer(
-        UPDATE_DT, std::bind(&HadabotController::update_odometry, this));
 
     publish_odometry_timer_ = this->create_wall_timer(
         PUBLISH_DT, std::bind(&HadabotController::publish_odometry, this));
