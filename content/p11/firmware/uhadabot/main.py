@@ -2,7 +2,7 @@ from uhadabot.uroslibpy import Ros, Topic, Message
 from boot import CONFIG, PIN_CONFIG
 import ssd1306
 from machine import Pin, PWM, I2C, Timer
-import math
+import machine
 import time
 import logging
 
@@ -43,14 +43,19 @@ class Encoder:
     def en_cb(self, pin):
         self.count += 1
 
+    def get_reset_count(self):
+        cnt = self.count
+        self.count = 0
+        return cnt
+
 
 ###############################################################################
 class EncoderSet:
     def __init__(self, ros, name_pin_tuple_list):
 
-        # Initial radps message
+        # Initial encoder ticks message
         dim_label = ""
-        self.ros_radps_message_json = {
+        self.ros_encoders_message_json = {
             "layout": {
                 "dim": [{
                     "label": dim_label,
@@ -59,7 +64,7 @@ class EncoderSet:
                 }],
                 "data_offset": 0,
             },
-            "data": [0.0] * len(name_pin_tuple_list)
+            "data": [0] * len(name_pin_tuple_list)
         }
 
         # List of encoders
@@ -70,22 +75,23 @@ class EncoderSet:
             dim_label += name_pin[0] + "_"
 
         # Update multi array dim label
-        self.ros_radps_message_json["layout"]["dim"][0]["label"] = dim_label
+        self.ros_encoders_message_json[
+            "layout"]["dim"][0]["label"] = dim_label.strip("_")
 
         self.ros = ros
         self.ros_pub = Topic(
-            ros, "hadabot/wheel_radps",
-            "std_msgs/Float32MultiArray")
+            ros, "hadabot/wheel_encoders",
+            "std_msgs/Int32MultiArray")
 
-    def publish_radps(self, radps_list):
-        for idx, radps in enumerate(radps_list):
-            self.ros_radps_message_json["data"][idx] = radps
+    def publish_encoders(self, encoder_ticks_list):
+        for idx, ticks in enumerate(encoder_ticks_list):
+            self.ros_encoders_message_json["data"][idx] = ticks
 
         # logger.info("Encoder publish {}".format(self.name))
-        self.ros_pub.publish(Message(self.ros_radps_message_json))
+        self.ros_pub.publish(Message(self.ros_encoders_message_json))
 
     def get_count(self, channel_idx):
-        return self.encoder_list[channel_idx].count
+        return self.encoder_list[channel_idx].get_reset_count()
 
 
 ###############################################################################
@@ -117,22 +123,10 @@ class Controller:
         self.en_set = EncoderSet(
             ros, [("left", en_pin_left), ("right", en_pin_right)])
 
-        # Encoder samples
-        self.prev_count_left = 0
-        self.prev_count_right = 0
-        self.prev_ms = time.ticks_ms()
-
-    ###########################################################################
-    def irq_poll_en(self, timer):
-        for en in [self.en_right, self.en_left]:
-            val = en.en_pin.value()
-            if (val ^ en.prev_pin_val) == 1:
-                en.count += 1
-                en.prev_pin_val = val
-
     ###########################################################################
     def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin, prev_direction):
-        factor = max(min(wheel_power_f32, 1.0), -1.0)
+        # factor = max(min(wheel_power_f32, 1.0), -1.0)
+        factor = max(min(wheel_power_f32, 1.0), 0.0)  # Only fwd
 
         # The Hadabot wheels actually don't turn well below a threshold,
         # so let's normalize between -1.0 and thresh, thresh to 1.0
@@ -140,27 +134,6 @@ class Controller:
             factor = factor * 0.3
             factor = factor + 0.7 if factor > 0 else factor
             factor = factor - 0.7 if factor < 0 else factor
-
-        # Overdrive motors to get them spinning, then back off to the
-        # speed we desire (hack for not having a PID controller)
-        if False:
-            dir_change_sleep_ms = 50
-            if prev_direction * factor == 0:
-                if factor > 0:
-                    self._send_motor_signal(0.8, pwm_pin, fr_pin)
-                    time.sleep_ms(dir_change_sleep_ms)
-                elif factor < 0:
-                    self._send_motor_signal(-0.8, pwm_pin, fr_pin)
-                    time.sleep_ms(dir_change_sleep_ms)
-            elif prev_direction * factor < 0:
-                # Changing direction - stop motor first
-                self._send_motor_signal(0.0, pwm_pin, fr_pin)
-                time.sleep_ms(dir_change_sleep_ms)
-
-                # Then overdrive in the opposite direction from
-                # the previous direction
-                self._send_motor_signal(-0.8 * prev_direction, pwm_pin, fr_pin)
-                time.sleep_ms(dir_change_sleep_ms)
 
         # Send command
         self._send_motor_signal(factor, pwm_pin, fr_pin)
@@ -199,27 +172,8 @@ class Controller:
         count_right = self.en_set.get_count(1)
         # machine.enable_irq(state)
 
-        cur_ms = time.ticks_ms()
-        time_delta_ms = time.ticks_diff(cur_ms, self.prev_ms)
-        per_second = 1000.0 / float(time_delta_ms)
-
-        # Left encoder
-        dcount_left = count_left - self.prev_count_left
-        radians = 2 * math.pi * (dcount_left / self.TICKS_PER_REVOLUTION)
-        radps_left = radians * per_second * self.fr_left
-
-        # Right encoder
-        dcount_right = count_right - self.prev_count_right
-        radians = 2 * math.pi * (dcount_right / self.TICKS_PER_REVOLUTION)
-        radps_right = radians * per_second * self.fr_right
-
         # Publish radps
-        self.en_set.publish_radps([radps_left, radps_right])
-
-        # Update previous sample
-        self.prev_ms = cur_ms
-        self.prev_count_left = count_left
-        self.prev_count_right = count_right
+        self.en_set.publish_encoders([count_left, count_right])
 
         if False:
             logger.info(
@@ -228,10 +182,6 @@ class Controller:
             logger.info(
                 "Encoder count {} - {}".format(
                     self.en_right.name, self.en_right.count))
-            if count_left >= 120:
-                self.left_wheel_cb({"data": 0.01})
-            if count_right >= 120:
-                self.right_wheel_cb({"data": 0.01})
 
 
 ###############################################################################
@@ -405,8 +355,13 @@ class Hadabot:
         except Exception as ex:
             logger.error("Spin exception hit {}".format(str(ex)))
             tim.deinit()
-            self.blink_led(3, end_off=True)
-            self.shutdown()
+            # self.blink_led(3, end_off=True)
+
+            # If this was not a user triggered shutdown then reset
+            if self.need_shutdown is False:
+                self.shutdown()
+                logger.error("Soft resetting")
+                machine.soft_reset()
 
 
 ###############################################################################
