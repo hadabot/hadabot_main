@@ -134,12 +134,12 @@ class Controller:
     def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin, prev_direction):
         factor = max(min(wheel_power_f32, 1.0), -1.0)
 
-        # The Hadabot wheels actually don't turn well below 0.5, so let's
-        # normalize between -1.0 and -0.5, 0.5 to 1.0
-        if False:
-            factor = factor * 0.5
-            factor = factor + 0.5 if factor > 0 else factor
-            factor = factor - 0.5 if factor < 0 else factor
+        # The Hadabot wheels actually don't turn well below a threshold,
+        # so let's normalize between -1.0 and thresh, thresh to 1.0
+        if True:
+            factor = factor * 0.3
+            factor = factor + 0.7 if factor > 0 else factor
+            factor = factor - 0.7 if factor < 0 else factor
 
         # Overdrive motors to get them spinning, then back off to the
         # speed we desire (hack for not having a PID controller)
