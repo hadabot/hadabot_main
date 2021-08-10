@@ -139,16 +139,6 @@ private:
     pow_r.data = std::min(std::max(v_r, -1.0), 1.0);
     pow_l.data = std::min(std::max(v_l, -1.0), 1.0);
 
-    // Cheap motors don't spin well so just max speed fwd or back
-    auto av_r = abs(pow_r.data);
-    auto av_l = abs(pow_l.data);
-    pow_r.data = (av_r > 0.8) ? av_r : ((av_r > 0.0) ? 0.8 : 0.0);
-    pow_r.data = (v_r < 0.0) ? pow_r.data * -1.0 : pow_r.data;
-    pow_l.data = (av_l > 0.8) ? av_l : ((av_l > 0.0) ? 0.8 : 0.0);
-    pow_l.data = (v_l < 0.0) ? pow_l.data * -1.0 : pow_l.data;
-    //pow_r.data = (v_r > 0.0) ? 1.0 : ((v_r < 0.0) ? -1.0 : 0.0);
-    //pow_l.data = (v_l > 0.0) ? 1.0 : ((v_l < 0.0) ? -1.0 : 0.0);
-
     wheel_power_left_pub_->publish(pow_l);
     wheel_power_right_pub_->publish(pow_r);
   }
