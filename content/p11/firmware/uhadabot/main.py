@@ -130,10 +130,11 @@ class Controller:
 
         # The Hadabot wheels actually don't turn well below a threshold,
         # so let's normalize between -1.0 and thresh, thresh to 1.0
-        if True:
+        if factor != 0.0:
             factor = factor * 0.3
             factor = factor + 0.7 if factor > 0 else factor
             factor = factor - 0.7 if factor < 0 else factor
+            factor = max(factor, 0.85)  # only care about fwd
 
         # Send command
         self._send_motor_signal(factor, pwm_pin, fr_pin)
