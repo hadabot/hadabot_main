@@ -136,8 +136,16 @@ pose: {
 
 1. [Make VPC for RoboMaker Cloud 9](https://docs.aws.amazon.com/cloud9/latest/user-guide/vpc-settings.html#vpc-settings-create-vpc)
 1. [Launch RoboMaker Development Environment](https://console.aws.amazon.com/robomaker/home)
+    1. Click -> menu bar icon on left -> Development environments
+        1. Click "Create development environment" button
+        1. Select, then Create
+            1. Foxy
+            1. m4.large
+            1. vpc-xxx (the one you created above)
+            1. subnet-xxx (don't think this matters)
+        1. Click "Open Environment" ... be patient, but do the below in parallel while you wait
     1. [Find the relevant 'cloud-9' security group](https://console.aws.amazon.com/vpc/home?region=us-east-1#securityGroups:)
-        1. Edit 'Inbound Rules' - Add 'All TCP' for '0.0.0.0/0'
+        1. Edit 'Inbound Rules' - Add 'All TCP' for 'Source' '0.0.0.0/0'
 1. Clone hadabot_main, set up
     1. `cd ~`
     1. `git clone https://github.com/hadabot/hadabot_main.git`
@@ -160,11 +168,10 @@ pose: {
     1. `npm install`
     1. `export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"`
     1. `node ./bin/rosbridge.js`
-1. Build p9/content/hadabot_ws
 1. Launch Virtual Desktop (might have to let Firefox open a new tab)
 1. Run in Virtual Desktop byobu terminal
     1. `export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"`
-    1. `cd hadabot_main/content/p9/hadabot_ws/`
+    1. `cd hadabot_main/content/p11/hadabot_ws/`
     1. `$ source install/setup.bash`
     1. `$ cd launch`
     1. `$ ros2 launch hadabot_nav2_launch.py`
