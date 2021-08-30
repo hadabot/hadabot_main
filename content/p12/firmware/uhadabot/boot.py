@@ -35,27 +35,27 @@ PIN_CONFIG = {
         {
             "label": "front", "pin": 32,
             "ori_rpy_deg": [0, 0, 0],
-            "pos_xyz_m": [0.07, 0, 0]
+            "pos_xyz_m": [0.1, 0, 0]
         },
         {
             "label": "front_left", "pin": 33,
             "ori_rpy_deg": [0, 0, 25],
-            "pos_xyz_m": [0.05, 0.05, 0]
+            "pos_xyz_m": [0.07, 0.075, 0]
         },
         {
             "label": "front_right", "pin": 34,
             "ori_rpy_deg": [0, 0, 360-25],
-            "pos_xyz_m": [0.05, -0.05, 0]
+            "pos_xyz_m": [0.07, -0.075, 0]
         },
         {
             "label": "back_left", "pin": 35,
             "ori_rpy_deg": [0, 0, 90],
-            "pos_xyz_m": [-0.07, 0.05, 0]
+            "pos_xyz_m": [-0.09, 0.07, 0]
         },
         {
             "label": "back_right", "pin": 36,
             "ori_rpy_deg": [0, 0, 270],
-            "pos_xyz_m": [-0.07, -0.05, 0]
+            "pos_xyz_m": [-0.09, -0.07, 0]
         },
     ]
 }
