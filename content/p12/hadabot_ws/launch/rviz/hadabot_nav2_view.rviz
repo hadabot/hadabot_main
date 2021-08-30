@@ -479,6 +479,57 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /hadabot/range_sensor/front
       Value: true
+    - Alpha: 0.5
+      Buffer Length: 1
+      Class: rviz_default_plugins/Range
+      Color: 0; 0; 0
+      Enabled: true
+      Name: Range Sensor Front Left
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /hadabot/range_sensor/front_left
+      Value: true
+    - Alpha: 0.5
+      Buffer Length: 1
+      Class: rviz_default_plugins/Range
+      Color: 0; 0; 0
+      Enabled: true
+      Name: Range Sensor Front Right
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /hadabot/range_sensor/front_right
+      Value: true
+    - Alpha: 0.5
+      Buffer Length: 1
+      Class: rviz_default_plugins/Range
+      Color: 0; 0; 0
+      Enabled: true
+      Name: Range Sensor Back Left
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /hadabot/range_sensor/back_left
+    - Alpha: 0.5
+      Buffer Length: 1
+      Class: rviz_default_plugins/Range
+      Color: 0; 0; 0
+      Enabled: true
+      Name: Range Sensor Back Right
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /hadabot/range_sensor/back_right
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
