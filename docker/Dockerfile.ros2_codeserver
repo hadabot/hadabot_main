@@ -131,7 +131,7 @@ RUN wget https://github.com/microsoft/vscode-cpptools/releases/download/1.0.1/cp
     rm cpptools-linux.vsix && \
     rm ms-python-release.vsix && \
     code-server --install-extension twxs.cmake && \
-    /usr/bin/python3 -m pip install -U autopep8 flake8 --user && \
+    /usr/bin/python3 -m pip install -U autopep8 flake8 jupyterlab --user && \
     echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> .bashrc
 
 
