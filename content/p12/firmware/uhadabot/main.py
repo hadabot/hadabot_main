@@ -385,7 +385,10 @@ class Hadabot:
         self.oled.show()
 
         if self.ros is not None:
-            self.ros.terminate()
+            try:
+                self.ros.terminate()
+            except Exception:
+                pass
             self.ros = None
 
         self.builtin_led.off()
@@ -422,8 +425,10 @@ class Hadabot:
 
             # If this was not a user triggered shutdown then reset
             if self.need_shutdown is False:
-                logger.error("Soft resetting")
-                machine.soft_reset()
+                logger.error(
+                    "Soft resetting doesn't quite work so just shutdown")
+                # machine.soft_reset()
+                self.shutdown()
 
 
 ###############################################################################
