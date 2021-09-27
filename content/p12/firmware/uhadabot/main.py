@@ -2,7 +2,6 @@ from uhadabot.uroslibpy import Ros, Topic, Message
 from boot import CONFIG, PIN_CONFIG
 import ssd1306
 from machine import Pin, PWM, I2C, Timer, ADC
-import machine
 import time
 import logging
 

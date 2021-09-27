@@ -1,8 +1,7 @@
 from uhadabot.uroslibpy import Ros, Topic, Message
 from boot import CONFIG, PIN_CONFIG
 import ssd1306
-from machine import Pin, PWM, I2C, Timer
-import machine
+from machine import Pin, PWM, I2C, Timer, ADC
 import time
 import logging
 
@@ -28,6 +27,59 @@ class ssd1306_stub:
 
 
 ###############################################################################
+class RangeSensorSet:
+
+    # 12-bit ADC: 0 to 4095 = 3.6v max
+    # 490 (0.43v) to 2740 (2.41v) - 150 (0.13v) intervals - 16 slots
+    dist_table_m = [
+        0.805, 0.589, 0.460, 0.375, 0.315, 0.271, 0.237, 0.210,
+        0.188, 0.171, 0.156, 0.143, 0.132, 0.123, 0.114, 0.107]
+
+    def __init__(self, ros):
+        self.ros = ros
+        self.r_sensors = []
+        for rs_pc in PIN_CONFIG["range_sensors"]:
+            rs_adc = ADC(Pin(rs_pc["pin"]))
+            rs_adc.atten(ADC.ATTN_11DB)
+            rs_adc.width(ADC.WIDTH_12BIT)  # 12bits
+
+            rs_topic = "hadabot/range_sensor/" + rs_pc["label"]
+            rs_frame_id = "range_sensor_" + rs_pc["label"]
+            self.r_sensors.append({
+                "label": rs_pc["label"],
+                "frame_id": rs_frame_id,
+                "adc_pin": rs_adc,
+                "ros_pub": Topic(ros, rs_topic, "sensor_msgs/Range"),
+                "fov_half_radians": (3.0/360.0) * 6.28
+            })
+
+    def publish_range_m(self):
+        for rs in self.r_sensors:
+            val_12bit = rs["adc_pin"].read()
+            val = max(min(val_12bit, 2739), 490)
+            fidx = (val - 490)/150.0
+            idx_start = int(fidx)
+            frac = fidx - idx_start
+            dist = ((self.dist_table_m[idx_start] * (1.0 - frac)) +
+                    (self.dist_table_m[idx_start+1] * frac))
+
+            rs["ros_pub"].publish(Message({
+                "header": {
+                    "stamp": {
+                        "sec": 0, "nanosec": 0
+                    },
+                    "frame_id": rs["frame_id"]
+                },
+                "radiation_type": 1,
+                "field_of_view": rs["fov_half_radians"],
+                "min_range": 0.1,
+                "max_range": 0.81,
+                "range": dist,
+            }))
+
+###############################################################################
+
+
 class Encoder:
 
     def __init__(self, name, pin):
@@ -80,8 +132,7 @@ class EncoderSet:
 
         self.ros = ros
         self.ros_pub = Topic(
-            ros, "hadabot/wheel_encoders",
-            "std_msgs/Int32MultiArray")
+            ros, "hadabot/wheel_encoders", "std_msgs/Int32MultiArray")
 
     def publish_encoders(self, encoder_ticks_list):
         for idx, ticks in enumerate(encoder_ticks_list):
@@ -122,6 +173,10 @@ class Controller:
         en_pin_right = Pin(PIN_CONFIG["right"]["encoder"]["a"], Pin.IN)
         self.en_set = EncoderSet(
             ros, [("left", en_pin_left), ("right", en_pin_right)])
+
+        # Range sensors
+        self.rs_set = RangeSensorSet(ros)
+        self.last_rs_pub_ms = time.ticks_ms()
 
     ###########################################################################
     def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin, prev_direction):
@@ -168,6 +223,7 @@ class Controller:
 
     ###########################################################################
     def run_once(self):
+        cur_ms = time.ticks_ms()
         # state = machine.disable_irq()
         count_left = self.en_set.get_count(0)
         count_right = self.en_set.get_count(1)
@@ -175,6 +231,11 @@ class Controller:
 
         # Publish radps
         self.en_set.publish_encoders([count_left, count_right])
+
+        if time.ticks_diff(cur_ms, self.last_rs_pub_ms) > 500:
+            # Publish range data
+            self.rs_set.publish_range_m()
+            self.last_rs_pub_ms = cur_ms
 
         if False:
             logger.info(
@@ -323,7 +384,10 @@ class Hadabot:
         self.oled.show()
 
         if self.ros is not None:
-            self.ros.terminate()
+            try:
+                self.ros.terminate()
+            except Exception:
+                pass
             self.ros = None
 
         self.builtin_led.off()
@@ -360,9 +424,10 @@ class Hadabot:
 
             # If this was not a user triggered shutdown then reset
             if self.need_shutdown is False:
+                logger.error(
+                    "Soft resetting doesn't quite work so just shutdown")
+                # machine.soft_reset()
                 self.shutdown()
-                logger.error("Soft resetting")
-                machine.soft_reset()
 
 
 ###############################################################################

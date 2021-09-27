@@ -20,41 +20,15 @@ sudo apt-get upgrade -y
 
 All steps done on your __host__ machine:
 
-#### a. Set up the Turtle's ESP32 network configuration
+#### a. Using the Hadabot online web tool
 
-```
-$ cd hadabot_main/content/p9/firmware
-$ cp uhadabot/hadabot_config_template.json uhadabot/hb.json
-```
+We will be using the Hadabot online web tool to flash this lesson's uhadabot.hbz bundle file on to the Turtle's ESP32.
 
-Enter your network info by editing the uhadabot/hb.json file:
+1. Note the location of the `<some_root_location>/hadabot_main/content/p11/firmware/uhadabot.hbz` bundle file
+1. Open the [Hadabot online tool to update the bundle file to the ESP32](https://www.hadabot.com/setup-esp32-upload-file-bundle.html).
+    1. The tool will also ask you for your current network SSID / password configuration.
 
-1. ros2_web_bridge_ip_addr:
-    1. Enter the IP address of your host development system (wrapped with double-quotes since JSON only recognizes strings).
-1. network:
-    1. Enter the SSID and password of your network (also wrapped in double-quotes).
-
-Confirm the network settings:
-
-```
-$ cat uhadabot/hb.json
-```
-
-#### b. Flash the Turtle's ESP32
-
-1. Press the "Boot" button on the ESP32 board to disconnect from the ROS system.
-    1. The blue on-board LED should turn off.
-1. Unplug your Turtle's ESP32 and Motor Driver from the batteries.
-1. Using a quality micro-USB cable, plug the ESP32 to your development computer.
-1. Then run the following to upload the firmware:
-
-```
-$ ampy --port /dev/<the_esp32_usb_port> run clean_firmware.py
-$ ampy --port /dev/<the_esp32_usb_port> put uhadabot
-$ ampy --port /dev/<the_esp32_usb_port> put boot.py
-```
-
-__IMPORTANT__: you must FIRST run 'ampy --port XX put uhadabot', since boot.py will use files from the /uhadabot folder.
+When the upload / setup completes, press the EN button to reset the ESP32.
 
 --------
 --------
@@ -81,7 +55,7 @@ colcon build --symlink-install
     1. Left-click the lower-left "chevron-like" system icon -> System Tools -> LXTerminal.
 
 1. In the new LXTerminal bash terminal:
-    1. `$ cd hadabot_main/content/p9/hadabot_ws/`
+    1. `$ cd hadabot_main/content/p11/hadabot_ws/`
     1. `$ source install/setup.bash`
     1. `$ cd launch`
     1. `$ ros2 launch hadabot_nav2_launch.py`

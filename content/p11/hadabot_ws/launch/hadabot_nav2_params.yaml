@@ -203,7 +203,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: True
-      robot_radius: 0.22
+      robot_radius: 0.15
       resolution: 0.05
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
