@@ -25,8 +25,7 @@ typedef enum
 
 #define PI 3.14159265
 
-// #define TICKS_PER_REVOLUTION 1080.0
-#define TICKS_PER_REVOLUTION 720.0
+#define TICKS_PER_REVOLUTION 1080.0
 #define RADIANS_PER_TICK ((2.0 * PI) / TICKS_PER_REVOLUTION)
 
 class HadabotController : public rclcpp::Node
@@ -51,6 +50,10 @@ private:
   int wheel_encoder_left_;
   int wheel_encoder_right_;
 
+  float wheel_power_left_;
+  float wheel_power_right_;
+  float wheel_power_min_;
+
   nav_msgs::msg::Odometry::SharedPtr pose_;
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;
@@ -61,6 +64,34 @@ private:
     this->wheel_encoder_left_ = msg->data[0];
     this->wheel_encoder_right_ = msg->data[1];
     this->update_odometry();
+
+    // Psuedo-PID controller for wheels - increment min power if wheels stalled
+    // but should be spinning. Else decrement min power if wheels are spinning
+    // If all stopped, then do nothing to min power.
+    float min_power_step = 0.05;
+    bool wheel_not_turning =
+        (wheel_power_left_ != 0.0 && this->wheel_encoder_left_ == 0.0) ||
+        (wheel_power_right_ != 0.0 && this->wheel_encoder_right_ == 0.0);
+    bool full_stopped =
+        (wheel_power_left_ == 0.0 && this->wheel_encoder_left_ == 0.0) &&
+        (wheel_power_right_ == 0.0 && this->wheel_encoder_right_ == 0.0);
+    float adj_power_factor =
+        wheel_not_turning ? 1.0 : (full_stopped ? 0.0 : -1.0);
+
+    auto prev_wheel_power_min = this->wheel_power_min_;
+    this->wheel_power_min_ += (min_power_step * adj_power_factor);
+
+    this->wheel_power_min_ =
+        std::min(std::max(double(this->wheel_power_min_), 0.0), 0.7);
+
+    // RCLCPP_INFO(this->get_logger(), "Min power %f", this->wheel_power_min_);
+
+    // New min power, so update wheel speed
+    if (prev_wheel_power_min != this->wheel_power_min_)
+    {
+      send_update_wheel_powers(
+          this->wheel_power_right_, this->wheel_power_left_);
+    }
   }
 
   /***************************************************************************/
@@ -117,6 +148,27 @@ private:
   }
 
   /***************************************************************************/
+  void send_update_wheel_powers(float v_r, float v_l)
+  {
+    std_msgs::msg::Float32 pow_r;
+    std_msgs::msg::Float32 pow_l;
+
+    // Normalize for range btw min_power and 1.0
+    // Do not modify origin v_r v_l passed in
+    auto pow_tmp_r = v_r * (1.0 - this->wheel_power_min_);
+    pow_r.data = (pow_tmp_r > 0.0) ? (pow_tmp_r + this->wheel_power_min_) : ((pow_tmp_r < 0.0) ? (pow_tmp_r - this->wheel_power_min_) : 0.0);
+    auto pow_tmp_l = v_l * (1.0 - this->wheel_power_min_);
+    pow_l.data = (pow_tmp_l > 0.0) ? (pow_tmp_l + this->wheel_power_min_) : ((pow_tmp_l < 0.0) ? (pow_tmp_l - this->wheel_power_min_) : 0.0);
+
+    wheel_power_right_pub_->publish(pow_r);
+    wheel_power_left_pub_->publish(pow_l);
+
+    // Update the wheel power with original values (not min power adjusted ones)
+    this->wheel_power_left_ = v_l;
+    this->wheel_power_right_ = v_r;
+  }
+
+  /***************************************************************************/
   void twist_cb(const geometry_msgs::msg::Twist::SharedPtr twist_msg)
   {
     if (this->run_mode_ != rm_go)
@@ -133,18 +185,16 @@ private:
 
     // RCLCPP_INFO(this->get_logger(), "Left %f - Right %f", v_l, v_r);
 
-    // Max radians per second for Hadabot wheels ~= 6 (almost one full rotation)
+    // Max radians per second for Hadabot wheels ~= X radians
     // Normalize btw -1 and 1.0
-    v_r = ((6.0 + v_r) / 6.0) - 1.0;
-    v_l = ((6.0 + v_l) / 6.0) - 1.0;
+    float max_rot_radians = 7.0;
+    v_r = ((max_rot_radians + v_r) / max_rot_radians) - 1.0;
+    v_l = ((max_rot_radians + v_l) / max_rot_radians) - 1.0;
 
-    std_msgs::msg::Float32 pow_r;
-    std_msgs::msg::Float32 pow_l;
-    pow_r.data = std::min(std::max(v_r, -1.0), 1.0);
-    pow_l.data = std::min(std::max(v_l, -1.0), 1.0);
+    v_r = std::min(std::max(v_r, -1.0), 1.0);
+    v_l = std::min(std::max(v_l, -1.0), 1.0);
 
-    wheel_power_left_pub_->publish(pow_l);
-    wheel_power_right_pub_->publish(pow_r);
+    this->send_update_wheel_powers(v_r, v_l);
   }
 
   /***************************************************************************/
@@ -168,7 +218,11 @@ private:
   }
 
 public:
-  HadabotController() : Node("hadabot_controller"), wheel_radius_m_(0.034), wheelbase_m_(0.14), wheel_encoder_left_(0), wheel_encoder_right_(0)
+  HadabotController() : Node("hadabot_controller"), wheel_radius_m_(0.035),
+                        wheelbase_m_(0.14),
+                        wheel_encoder_left_(0), wheel_encoder_right_(0),
+                        wheel_power_left_(0.0), wheel_power_right_(0.0),
+                        wheel_power_min_(0.0)
   {
     RCLCPP_INFO(this->get_logger(), "Starting Hadabot Controller");
 

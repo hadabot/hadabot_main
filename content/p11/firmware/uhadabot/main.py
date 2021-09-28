@@ -3,6 +3,7 @@ from boot import CONFIG, PIN_CONFIG
 import ssd1306
 from machine import Pin, PWM, I2C, Timer, ADC
 import time
+import _thread
 import logging
 
 
@@ -77,23 +78,21 @@ class RangeSensorSet:
                 "range": dist,
             }))
 
+
 ###############################################################################
-
-
 class Encoder:
 
     def __init__(self, name, pin):
         self.name = name
-
+        self.spin_dir_fwd_rev = 1  # -1 reverse, 1 fwd
         self.en_pin = pin
         self.count = 0
-        self.prev_pin_val = pin.value()
 
         # Encoder interrupts
         self.en_pin.irq(trigger=Pin.IRQ_RISING, handler=self.en_cb)
 
     def en_cb(self, pin):
-        self.count += 1
+        self.count += self.spin_dir_fwd_rev  # 1 if fwd, -1 if rev
 
     def get_reset_count(self):
         cnt = self.count
@@ -122,7 +121,7 @@ class EncoderSet:
         # List of encoders
         self.encoder_list = []
         for name_pin in name_pin_tuple_list:
-            # Create encoder object
+            # Create encoder object (name, pin)
             self.encoder_list.append(Encoder(name_pin[0], name_pin[1]))
             dim_label += name_pin[0] + "_"
 
@@ -144,10 +143,17 @@ class EncoderSet:
     def get_count(self, channel_idx):
         return self.encoder_list[channel_idx].get_reset_count()
 
+    # Spin dir - prev_dir stop, <0 reverse, >0 forward
+    def set_spin_direction(self, wheel_power, channel_idx):
+        # Prev dir assumes momentum in the spin direction for enc accuracy
+        prev_dir = self.encoder_list[channel_idx].spin_dir_fwd_rev
+        spin_dir = -1 if wheel_power < 0.0 else prev_dir
+        spin_dir = 1 if wheel_power > 0.0 else spin_dir
+        self.encoder_list[channel_idx].spin_dir_fwd_rev = spin_dir
+
 
 ###############################################################################
 class Controller:
-    TICKS_PER_REVOLUTION = 1080  # 12 ppr (1:90) --- 135 3ppr (1:45)
 
     ###########################################################################
     def __init__(self, ros):
@@ -164,10 +170,6 @@ class Controller:
         self.fr_pin_left.off()
         self.fr_pin_right.off()
 
-        # Motor direction (fwd == 1.0, reverse == -1.0, stop == 0.0)
-        self.fr_left = 0.0
-        self.fr_right = 0.0
-
         # Encoder
         en_pin_left = Pin(PIN_CONFIG["left"]["encoder"]["a"], Pin.IN)
         en_pin_right = Pin(PIN_CONFIG["right"]["encoder"]["a"], Pin.IN)
@@ -180,16 +182,12 @@ class Controller:
 
     ###########################################################################
     def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin, prev_direction):
-        # factor = max(min(wheel_power_f32, 1.0), -1.0)
-        factor = max(min(wheel_power_f32, 1.0), 0.0)  # Only fwd
+        factor = max(min(wheel_power_f32, 1.0), -1.0)
 
-        # The Hadabot wheels actually don't turn well below a threshold,
-        # so let's normalize between -1.0 and thresh, thresh to 1.0
-        if factor != 0.0:
-            factor = factor * 0.3
-            factor = factor + 0.7 if factor > 0 else factor
-            factor = factor - 0.7 if factor < 0 else factor
-            factor = max(factor, 0.85)  # only care about fwd
+        # Reversing direction? Stop first!
+        if (prev_direction * wheel_power_f32) < 0.0:
+            self._send_motor_signal(0.0, pwm_pin, fr_pin)
+            time.sleep_ms(10)
 
         # Send command
         self._send_motor_signal(factor, pwm_pin, fr_pin)
@@ -207,19 +205,21 @@ class Controller:
 
     ###########################################################################
     def right_wheel_cb(self, wheel_power):
+        left_right = 1  # right
+        spin_dir = self.en_set.encoder_list[left_right].spin_dir_fwd_rev
+        self.en_set.set_spin_direction(wheel_power["data"], left_right)
         self.turn_wheel(
             wheel_power["data"], self.pwm_pin_right, self.fr_pin_right,
-            self.fr_right)
-        self.fr_right = -1.0 if wheel_power["data"] < 0.0 else 0.0
-        self.fr_right = 1.0 if wheel_power["data"] > 0.0 else self.fr_right
+            spin_dir)
 
     ###########################################################################
     def left_wheel_cb(self, wheel_power):
+        left_right = 0  # left
+        spin_dir = self.en_set.encoder_list[left_right].spin_dir_fwd_rev
+        self.en_set.set_spin_direction(wheel_power["data"], left_right)
         self.turn_wheel(
             wheel_power["data"], self.pwm_pin_left, self.fr_pin_left,
-            self.fr_left)
-        self.fr_left = -1.0 if wheel_power["data"] < 0.0 else 0.0
-        self.fr_left = 1.0 if wheel_power["data"] > 0.0 else self.fr_left
+            spin_dir)
 
     ###########################################################################
     def run_once(self):
@@ -232,7 +232,8 @@ class Controller:
         # Publish radps
         self.en_set.publish_encoders([count_left, count_right])
 
-        if time.ticks_diff(cur_ms, self.last_rs_pub_ms) > 500:
+        # if time.ticks_diff(cur_ms, self.last_rs_pub_ms) > 500:
+        if False:
             # Publish range data
             self.rs_set.publish_range_m()
             self.last_rs_pub_ms = cur_ms
@@ -329,10 +330,8 @@ class Hadabot:
             self.boot_button.irq(trigger=Pin.IRQ_RISING,
                                  handler=self.user_shutdown_cb)
 
-            # Spin timer
-            self.spin_timer = Timer(0)
-            self.spin_timer.init(period=10, mode=Timer.PERIODIC,
-                                 callback=self.spin)
+            # Spin thread
+            _thread.start_new_thread(self.spin, ())
 
         except Exception as ex:
             logger.error("Init exception hit {}".format(str(ex)))
@@ -343,7 +342,7 @@ class Hadabot:
     ###########################################################################
     def user_shutdown_cb(self, pin):
         logger.info("User shutdown invoked")
-        self.shutdown()
+        self.need_shutdown = True
 
     ###########################################################################
     def ping_time_reference_cb(self, msg):
@@ -393,41 +392,48 @@ class Hadabot:
         self.builtin_led.off()
 
     ###########################################################################
-    def spin(self, tim):
-        try:
-            if self.need_shutdown:
-                raise Exception("Shut down requested")
+    def spin(self):
+        go = True
+        while go:
+            try:
+                if self.need_shutdown:
+                    raise Exception("Shut down requested")
 
-            self.ros.run_once()
+                self.ros.run_once()
 
-            cur_ms = time.ticks_ms()
+                cur_ms = time.ticks_ms()
 
-            # Run the controller
-            if time.ticks_diff(cur_ms, self.last_controller_ms) > 100:
-                self.controller.run_once()
-                self.last_controller_ms = cur_ms
+                # Run the controller
+                if time.ticks_diff(cur_ms, self.last_controller_ms) > 50:
+                    self.controller.run_once()
+                    self.last_controller_ms = cur_ms
 
-            # Publish heartbeat message
-            if time.ticks_diff(cur_ms, self.last_hb_ms) > 5000:
-                # logger.info("Encoder left - {}".format(en_count_left))
-                # logger.info("Encoder right - {}".format(en_count_right))
-                # self.log_info.publish(Message(
-                #    "Hadabot heartbeat - IP {}".format(
-                #        self.hadabot_ip_address)))
-                self.log_info.publish(Message(str(cur_ms)))
-                self.last_hb_ms = cur_ms
+                # Publish heartbeat message
+                if time.ticks_diff(cur_ms, self.last_hb_ms) > 5000:
+                    # logger.info("Encoder left - {}".format(en_count_left))
+                    # logger.info("Encoder right - {}".format(en_count_right))
+                    # self.log_info.publish(Message(
+                    #    "Hadabot heartbeat - IP {}".format(
+                    #        self.hadabot_ip_address)))
+                    self.log_info.publish(Message(str(cur_ms)))
+                    self.last_hb_ms = cur_ms
 
-        except Exception as ex:
-            logger.error("Spin exception hit {}".format(str(ex)))
-            tim.deinit()
-            # self.blink_led(3, end_off=True)
+            except Exception as ex:
+                logger.error("Spin exception hit {}".format(str(ex)))
+                go = False
 
-            # If this was not a user triggered shutdown then reset
-            if self.need_shutdown is False:
-                logger.error(
-                    "Soft resetting doesn't quite work so just shutdown")
-                # machine.soft_reset()
+                # If this was not a user triggered shutdown then reset
+                if self.need_shutdown is False:
+                    logger.error(
+                        "Soft resetting doesn't quite work so just shutdown")
+                    # machine.soft_reset()
+                else:
+                    ex = None  # User requested shutdown
+
                 self.shutdown()
+
+                if ex is not None:
+                    raise ex
 
 
 ###############################################################################
