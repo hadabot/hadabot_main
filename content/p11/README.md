@@ -26,7 +26,7 @@ We will be using the Hadabot online web tool to flash this lesson's uhadabot.hbz
 
 1. Note the location of the `<some_root_location>/hadabot_main/content/p11/firmware/uhadabot.hbz` bundle file
 1. Open the [Hadabot online tool to update the bundle file to the ESP32](https://www.hadabot.com/setup-esp32-upload-file-bundle.html).
-    1. The tool will also ask you for your current network SSID / password configuration.
+    1. The tool will also ask you for your (1) current network SSID (2) Wifi password, as well as (3) the IP address of the laptop you are running the Hadabot ROS 2 Docker stack.
 
 When the upload / setup completes, press the EN button to reset the ESP32.
 
@@ -47,20 +47,25 @@ cd hadabot_ws
 colcon build --symlink-install 
 ```
 
-3. Once the build completes, we need to open up a browser-based VNC window to kick off the application. Open a browser-based VNC environment via http://localhost:9124/
+3. Once the build completes, we need to open up a browser-based VNC window to kick off the application. 
+    1. Make your browser window large / full-screen. This will help enlarge the VNC desktop real-estate.
+    1. Open a browser-based VNC environment via http://localhost:9124/
 
 ## In the __browser-based VNC__ tab:
 
 1. Kick off a bash terminal:
     1. Left-click the lower-left "chevron-like" system icon -> System Tools -> LXTerminal.
 
-1. In the new LXTerminal bash terminal:
-    1. `$ cd hadabot_main/content/p11/hadabot_ws/`
-    1. `$ source install/setup.bash`
-    1. `$ cd launch`
-    1. `$ ros2 launch hadabot_nav2_launch.py`
+1. In the new LXTerminal bash terminal, enter the following:
 
-1. The rviz window should appear
+```
+$ cd hadabot_main/content/p11/hadabot_ws/
+$ source install/setup.bash
+$ cd launch
+$ ros2 launch hadabot_nav2_launch.py
+```
+
+3. The rviz window should appear
 
 1. In the rviz application:
     1. Click on "Navigation2 Goal" button (in the top main menu bar).
@@ -74,7 +79,7 @@ colcon build --symlink-install
 
 ## Misc
 
-To send Nav2 goal using the ros2 cli
+To send a Nav2 goal pose of (1m,1m) facing direct east, using the ros2 cli
 ```
 ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "
 {
@@ -88,8 +93,8 @@ pose: {
     },
   pose: {
     position: {
-      x: 6.0,
-      y: 5.0,
+      x: 1.0,
+      y: 1.0,
       z: 0.0
       },
     orientation: {
@@ -110,50 +115,85 @@ pose: {
 
 1. [Make VPC for RoboMaker Cloud 9](https://docs.aws.amazon.com/cloud9/latest/user-guide/vpc-settings.html#vpc-settings-create-vpc)
 1. [Launch RoboMaker Development Environment](https://console.aws.amazon.com/robomaker/home)
-    1. Click -> menu bar icon on left -> Development environments
+    1. Click -> menu bar icon on the upper left -> Development environments
         1. Click "Create development environment" button
-        1. Select, then Create
-            1. Foxy
-            1. m4.large
-            1. vpc-xxx (the one you created above)
-            1. subnet-xxx (don't think this matters)
-        1. Click "Open Environment" ... be patient, but do the below in parallel while you wait
-    1. [Find the relevant 'cloud-9' security group](https://console.aws.amazon.com/vpc/home?region=us-east-1#securityGroups:)
-        1. Edit 'Inbound Rules' - Add 'All TCP' for 'Source' '0.0.0.0/0'
-1. Clone hadabot_main, set up
-    1. `cd ~`
-    1. `git clone https://github.com/hadabot/hadabot_main.git`
-    1. `sudo apt-get update; sudo apt-get upgrade -y`
-    1. `export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"`
-    1. `sudo apt-get install -y ros-foxy-rmw-cyclonedds-cpp ros-foxy-navigation2 ros-foxy-nav2-bringup`
-    1. `cd hadabot_main/content/p11/hadabot_ws/`
-    1. `colcon build --symlink-install`
-1. Install ros2_web_bridge
-    1. `cd ~`
-    1. May not need the next steps since there's nvm already
-        1. `curl -sL https://deb.nodesource.com/setup_12.x -o nodesource_setup.sh`
-        1. `sudo /bin/bash nodesource_setup.sh`
-    1. `nvm install v12.22.1`
-        1. // May not need `sudo apt-get install -y nodejs`
-    1. `git clone https://github.com/RobotWebTools/ros2-web-bridge.git`
-    1. `cd ros2-web-bridge`
-    1. `git checkout 0.3.1 -b rel_branch`
-    1. `npm install rclnodejs@0.18.2`
-    1. `npm install`
-    1. `export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"`
-    1. `node ./bin/rosbridge.js`
-1. Launch Virtual Desktop (might have to let Firefox open a new tab)
-1. Run in Virtual Desktop byobu terminal
-    1. `export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"`
-    1. `cd hadabot_main/content/p11/hadabot_ws/`
-    1. `$ source install/setup.bash`
-    1. `$ cd launch`
-    1. `$ ros2 launch hadabot_nav2_launch.py`
-1. In each new terminal you open
-    1. `export RMW_IMPLEMENTATION="rmw_cyclonedds_cpp"; cd ~/hadabot_main/content/p11/hadabot_ws/; source install/setup.bash`
-1. To connect to insecure Websocket ROS bridge from [Hadabot Dashboard](https://www.hadabot.com/tools/hadabot-dashboard.html)
+        1. Select / enter, then Create
+            1. __Name__: hadabot-on-aws
+            1. __Pre-installed robot software suite__: Foxy
+            1. __Instance type__: m4.large
+            1. __VPC__: vpc-xxx (the one you created above)
+            1. __Subnets__: subnet-xxx (don't think this matters)
+        1. Click "Open Environment" to open the IDE... be patient. You can do the 'security group' modification below in parallel while you wait
+    1. [Find / select the relevant 'aws-cloud9-hadabot-on-aws-xxxx' security group](https://console.aws.amazon.com/vpc/home#securityGroups:)
+        1. Edit 'Inbound Rules' - Add 'All TCP' for 'Source' 'Anywhere-IPv4' (ie '0.0.0.0/0')
+        1. Click 'Save Rules'
+1. Go back to your Cloud9 environment. The set up should be done. 
+    1. You can close the "Welcome" panel if you like.
+    1. At the bottom of the Cloud9 IDE, you'll notice a _bash_ terminal panel. Pull it up / make it larger.
+1. In the _bash_ terminal, clone the hadabot_main Git repository, and go to the relevant directory:
+
+```
+$ cd ~
+$ git clone https://github.com/hadabot/hadabot_main.git
+$ cd hadabot_main/content/p11/hadabot_ws
+```
+
+5. Source some specific Hadabot ROS 2 environment variables
+
+```
+$ source ../aws/hadabot_aws_source_env.bash
+```
+
+6. Update system, setup the Hadabot ROS 2 Nav2 and bridge agent software stack, kick off the ROS 2 bridge agent... this will take a while... be patient.
+
+```
+$ bash ../aws/hadabot_aws_setup.bash
+```
+
+7. When the step aboves finishes, the ROS 2 web bridge agent will be running in the bash terminal.
+1. From the Cloud9 IDE, launch a Virtual Desktop
+    1. At the top of the Cloud9 IDE, there's a robot icon. To the right, click 'Virtual Desktop' -> 'Launch Virtual Desktop'
+    1. (You might have give permission for Firefox/Chrome/etc to open a new tab)
+    1. Be patient here. It may appear that nothing is happening.  But then after 30-60 seconds, a new tab will open with a Virtual Desktop environment!?! (Not the most ideal AWS user experience!)
+1. From the Virtual Desktop, click on the left-side 9-dot icon. Click the 'xterm' icon to open an xterm window.
+1. In the xterm window, launch the Hadabot ROS 2 Nav2 launch script:
+
+```
+$ cd hadabot_main/content/p11/hadabot_ws/launch
+$ source ../../aws/hadabot_aws_source_env.bash
+$ source ../install/setup.bash
+$ ros2 launch hadabot_nav2_launch.py
+```
+
+11. An rviz window should pop up
+1. (Last but not least) Set up your Hadabot Turtle to connect to the ROS 2 system running on AWS RoboMaker.
+    1. Find the IP address of the AWS cloud instance that's running RoboMaker.
+        1. [Go to the AWS EC2 Instances dashboard](https://console.aws.amazon.com/ec2/home#Instances:)
+        1. Select an instance named 'aws-cloud9-hadabot-on-aws-xxxx' instance.
+        1. In the 'Instance Summary', look for / write down the 'Public IPv4 address'
+    1. Grab your Hadabot Turtle. Connect the ESP32 to your computer via the micro-USB cable.
+    1. Open the [Hadabot online tool to update the bundle file to the ESP32](https://www.hadabot.com/setup-esp32-upload-file-bundle.html).
+        1. Click the 'Click to skip the file bundle upload...' to avoid loading the file bundle (which you should have already done for the p11/firmware/uhadabot.hbz file bundle)
+        1. The Wifi SSID and password is self-explanatory.
+        1. For the IP address of your computer, enter in the 'Public IPv4 address' of the EC2 instance running ROS 2 (which you noted above).
+        1. Click 'Upload network configuration...'
+1. You should now be ready to use the Navigation 'Goal' button to move the Hadabot Turtle to a specified pose!
+
+
+
+#### Other things to note when using AWS RoboMaker with Hadabot
+
+1. In each new terminal you open, you need to setup the following to use ROS 2:
+
+`cd ~/hadabot_main/content/p11/hadabot_ws/; source ../aws/hadabot_aws_source_env.bash; source install/setup.bash`
+
+2. To connect to insecure Websocket ROS bridge from [Hadabot Dashboard](https://www.hadabot.com/tools/hadabot-dashboard.html)
     1. Click on 'padlock' to the left of the URL
     1. Site Settings -> Insecure Content -> "Allow"
+
+-------
+-------
+-------
 
 # Latency measurements
 
