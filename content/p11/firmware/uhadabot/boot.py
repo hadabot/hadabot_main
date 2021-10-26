@@ -83,20 +83,43 @@ def do_start_network():
                 CONFIG_FILE))
 
     led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
-    if not sta_if.isconnected():
-        print('Connecting to network {}...'.format(CONFIG["network"]["ssid"]))
-        sta_if.active(True)
-        sta_if.connect(CONFIG["network"]["ssid"],
-                       CONFIG["network"]["password"])
-        while not sta_if.isconnected():
-            print('Waiting for network to connect...')
+    ifconfig = None
+    if 'as_ap' in CONFIG["network"] and CONFIG["network"]["as_ap"] is True:
+        ap = network.WLAN(network.AP_IF)
+        ap.active(True)
+        ap.ifconfig(('192.168.86.1', '255.255.255.0',
+                     '192.168.86.1', '8.8.8.8'))
+        ap.config(essid=CONFIG["network"]["ssid"],
+                  password=CONFIG["network"]["password"],
+                  authmode=network.AUTH_WPA_WPA2_PSK,
+                  max_clients=20)
+
+        while ap.active() is False:
+            print('Waiting for AP to become active...')
             led_pin.on()
             time.sleep(0.5)
             led_pin.off()
             time.sleep(0.5)
-            pass
-    ifconfig = sta_if.ifconfig()
-    print('Network connected. Config: ', ifconfig)
+
+        ifconfig = ap.ifconfig()
+        print('AP set up complete. Config: ', ifconfig)
+    else:
+        CONFIG["network"]["as_ap"] = False
+        if not sta_if.isconnected():
+            print('Connecting to network {}...'.format(
+                CONFIG["network"]["ssid"]))
+            sta_if.active(True)
+            sta_if.connect(CONFIG["network"]["ssid"],
+                           CONFIG["network"]["password"])
+            while not sta_if.isconnected():
+                print('Waiting for network to connect...')
+                led_pin.on()
+                time.sleep(0.5)
+                led_pin.off()
+                time.sleep(0.5)
+
+        ifconfig = sta_if.ifconfig()
+        print('Network connected. Config: ', ifconfig)
     CONFIG["network"]["hadabot_ip_address"] = ifconfig[0]
     led_pin.on()
 

@@ -264,6 +264,13 @@ class Hadabot:
             # Setup ROS
             self.hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
             self.builtin_led = Pin(PIN_CONFIG["led"]["status"], Pin.OUT)
+            if CONFIG["network"]["as_ap"] is True:
+                import network
+                ap = network.WLAN(network.AP_IF)
+                while len(ap.status('stations')) == 0:
+                    logger.info("Waiting for the machine running the " +
+                                "ros2 web bridge to connect to the network...")
+                    time.sleep(5)
             self.ros = Ros(CONFIG["ros2_web_bridge_ip_addr"])
 
             # Set up OLED
