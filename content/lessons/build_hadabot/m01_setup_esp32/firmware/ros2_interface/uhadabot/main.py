@@ -1,9 +1,9 @@
 from uhadabot.uroslibpy import Ros, Topic, Message
 from boot import CONFIG, PIN_CONFIG
 import ssd1306
-from machine import Pin, PWM, I2C, Timer
-import math
+from machine import Pin, PWM, I2C, Timer, ADC
 import time
+import _thread
 import logging
 
 
@@ -28,34 +28,132 @@ class ssd1306_stub:
 
 
 ###############################################################################
+class RangeSensorSet:
+
+    # 12-bit ADC: 0 to 4095 = 3.6v max
+    # 490 (0.43v) to 2740 (2.41v) - 150 (0.13v) intervals - 16 slots
+    dist_table_m = [
+        0.805, 0.589, 0.460, 0.375, 0.315, 0.271, 0.237, 0.210,
+        0.188, 0.171, 0.156, 0.143, 0.132, 0.123, 0.114, 0.107]
+
+    def __init__(self, ros):
+        self.ros = ros
+        self.r_sensors = []
+        for rs_pc in PIN_CONFIG["range_sensors"]:
+            rs_adc = ADC(Pin(rs_pc["pin"]))
+            rs_adc.atten(ADC.ATTN_11DB)
+            rs_adc.width(ADC.WIDTH_12BIT)  # 12bits
+
+            rs_topic = "hadabot/range_sensor/" + rs_pc["label"]
+            rs_frame_id = "range_sensor_" + rs_pc["label"]
+            self.r_sensors.append({
+                "label": rs_pc["label"],
+                "frame_id": rs_frame_id,
+                "adc_pin": rs_adc,
+                "ros_pub": Topic(ros, rs_topic, "sensor_msgs/Range"),
+                "fov_half_radians": (3.0/360.0) * 6.28
+            })
+
+    def publish_range_m(self):
+        for rs in self.r_sensors:
+            val_12bit = rs["adc_pin"].read()
+            val = max(min(val_12bit, 2739), 490)
+            fidx = (val - 490)/150.0
+            idx_start = int(fidx)
+            frac = fidx - idx_start
+            dist = ((self.dist_table_m[idx_start] * (1.0 - frac)) +
+                    (self.dist_table_m[idx_start+1] * frac))
+
+            rs["ros_pub"].publish(Message({
+                "header": {
+                    "stamp": {
+                        "sec": 0, "nanosec": 0
+                    },
+                    "frame_id": rs["frame_id"]
+                },
+                "radiation_type": 1,
+                "field_of_view": rs["fov_half_radians"],
+                "min_range": 0.1,
+                "max_range": 0.81,
+                "range": dist,
+            }))
+
+
+###############################################################################
 class Encoder:
 
-    def __init__(self, ros, name, pin):
+    def __init__(self, name, pin):
         self.name = name
-
+        self.spin_dir_fwd_rev = 1  # -1 reverse, 1 fwd
         self.en_pin = pin
         self.count = 0
-        self.prev_pin_val = pin.value()
 
         # Encoder interrupts
         self.en_pin.irq(trigger=Pin.IRQ_RISING, handler=self.en_cb)
 
+    def en_cb(self, pin):
+        self.count += self.spin_dir_fwd_rev  # 1 if fwd, -1 if rev
+
+    def get_reset_count(self):
+        cnt = self.count
+        self.count = 0
+        return cnt
+
+
+###############################################################################
+class EncoderSet:
+    def __init__(self, ros, name_pin_tuple_list):
+
+        # Initial encoder ticks message
+        dim_label = ""
+        self.ros_encoders_message_json = {
+            "layout": {
+                "dim": [{
+                    "label": dim_label,
+                    "size": len(name_pin_tuple_list),
+                    "stride": len(name_pin_tuple_list)
+                }],
+                "data_offset": 0,
+            },
+            "data": [0] * len(name_pin_tuple_list)
+        }
+
+        # List of encoders
+        self.encoder_list = []
+        for name_pin in name_pin_tuple_list:
+            # Create encoder object (name, pin)
+            self.encoder_list.append(Encoder(name_pin[0], name_pin[1]))
+            dim_label += name_pin[0] + "_"
+
+        # Update multi array dim label
+        self.ros_encoders_message_json[
+            "layout"]["dim"][0]["label"] = dim_label.strip("_")
+
         self.ros = ros
         self.ros_pub = Topic(
-            ros, "hadabot/wheel_radps_{}".format(self.name),
-            "std_msgs/Float32")
+            ros, "hadabot/wheel_encoders", "std_msgs/Int32MultiArray")
 
-    def en_cb(self, pin):
-        self.count += 1
+    def publish_encoders(self, encoder_ticks_list):
+        for idx, ticks in enumerate(encoder_ticks_list):
+            self.ros_encoders_message_json["data"][idx] = ticks
 
-    def publish_radps(self, radps):
         # logger.info("Encoder publish {}".format(self.name))
-        self.ros_pub.publish(Message({"data": radps}))
+        self.ros_pub.publish(Message(self.ros_encoders_message_json))
+
+    def get_count(self, channel_idx):
+        return self.encoder_list[channel_idx].get_reset_count()
+
+    # Spin dir - prev_dir stop, <0 reverse, >0 forward
+    def set_spin_direction(self, wheel_power, channel_idx):
+        # Prev dir assumes momentum in the spin direction for enc accuracy
+        prev_dir = self.encoder_list[channel_idx].spin_dir_fwd_rev
+        spin_dir = -1 if wheel_power < 0.0 else prev_dir
+        spin_dir = 1 if wheel_power > 0.0 else spin_dir
+        self.encoder_list[channel_idx].spin_dir_fwd_rev = spin_dir
 
 
 ###############################################################################
 class Controller:
-    TICKS_PER_REVOLUTION = 1080  # 12 ppr (1:90) --- 135 3ppr (1:45)
 
     ###########################################################################
     def __init__(self, ros):
@@ -72,60 +170,24 @@ class Controller:
         self.fr_pin_left.off()
         self.fr_pin_right.off()
 
-        # Motor direction (fwd == 1.0, reverse == -1.0, stop == 0.0)
-        self.fr_left = 0.0
-        self.fr_right = 0.0
-
         # Encoder
         en_pin_left = Pin(PIN_CONFIG["left"]["encoder"]["a"], Pin.IN)
         en_pin_right = Pin(PIN_CONFIG["right"]["encoder"]["a"], Pin.IN)
+        self.en_set = EncoderSet(
+            ros, [("left", en_pin_left), ("right", en_pin_right)])
 
-        self.en_left = Encoder(ros, "left", en_pin_left)
-        self.en_right = Encoder(ros, "right", en_pin_right)
-
-        # Encoder samples
-        self.prev_count_left = 0
-        self.prev_count_right = 0
-        self.prev_ms = time.ticks_ms()
-
-    ###########################################################################
-    def irq_poll_en(self, timer):
-        for en in [self.en_right, self.en_left]:
-            val = en.en_pin.value()
-            if (val ^ en.prev_pin_val) == 1:
-                en.count += 1
-                en.prev_pin_val = val
+        # Range sensors
+        self.rs_set = RangeSensorSet(ros)
+        self.last_rs_pub_ms = time.ticks_ms()
 
     ###########################################################################
     def turn_wheel(self, wheel_power_f32, pwm_pin, fr_pin, prev_direction):
         factor = max(min(wheel_power_f32, 1.0), -1.0)
 
-        # The Hadabot wheels actually don't turn well below 0.5, so let's
-        # normalize between -1.0 and -0.5, 0.5 to 1.0
-        if False:
-            factor = factor * 0.5
-            factor = factor + 0.5 if factor > 0 else factor
-            factor = factor - 0.5 if factor < 0 else factor
-
-        # Overdrive motors to get them spinning, then back off to the
-        # speed we desire (hack for not having a PID controller)
-        dir_change_sleep_ms = 50
-        if prev_direction * factor == 0:
-            if factor > 0:
-                self._send_motor_signal(0.8, pwm_pin, fr_pin)
-                time.sleep_ms(dir_change_sleep_ms)
-            elif factor < 0:
-                self._send_motor_signal(-0.8, pwm_pin, fr_pin)
-                time.sleep_ms(dir_change_sleep_ms)
-        elif prev_direction * factor < 0:
-            # Changing direction - stop motor first
+        # Reversing direction? Stop first!
+        if (prev_direction * wheel_power_f32) < 0.0:
             self._send_motor_signal(0.0, pwm_pin, fr_pin)
-            time.sleep_ms(dir_change_sleep_ms)
-
-            # Then overdrive in the opposite direction from
-            # the previous direction
-            self._send_motor_signal(-0.8 * prev_direction, pwm_pin, fr_pin)
-            time.sleep_ms(dir_change_sleep_ms)
+            time.sleep_ms(10)
 
         # Send command
         self._send_motor_signal(factor, pwm_pin, fr_pin)
@@ -143,47 +205,38 @@ class Controller:
 
     ###########################################################################
     def right_wheel_cb(self, wheel_power):
+        left_right = 1  # right
+        spin_dir = self.en_set.encoder_list[left_right].spin_dir_fwd_rev
+        self.en_set.set_spin_direction(wheel_power["data"], left_right)
         self.turn_wheel(
             wheel_power["data"], self.pwm_pin_right, self.fr_pin_right,
-            self.fr_right)
-        self.fr_right = -1.0 if wheel_power["data"] < 0.0 else 0.0
-        self.fr_right = 1.0 if wheel_power["data"] > 0.0 else self.fr_right
+            spin_dir)
 
     ###########################################################################
     def left_wheel_cb(self, wheel_power):
+        left_right = 0  # left
+        spin_dir = self.en_set.encoder_list[left_right].spin_dir_fwd_rev
+        self.en_set.set_spin_direction(wheel_power["data"], left_right)
         self.turn_wheel(
             wheel_power["data"], self.pwm_pin_left, self.fr_pin_left,
-            self.fr_left)
-        self.fr_left = -1.0 if wheel_power["data"] < 0.0 else 0.0
-        self.fr_left = 1.0 if wheel_power["data"] > 0.0 else self.fr_left
+            spin_dir)
 
     ###########################################################################
     def run_once(self):
+        cur_ms = time.ticks_ms()
         # state = machine.disable_irq()
-        count_left = self.en_left.count
-        count_right = self.en_right.count
+        count_left = self.en_set.get_count(0)
+        count_right = self.en_set.get_count(1)
         # machine.enable_irq(state)
 
-        cur_ms = time.ticks_ms()
-        time_delta_ms = time.ticks_diff(cur_ms, self.prev_ms)
-        per_second = 1000.0 / float(time_delta_ms)
+        # Publish radps
+        self.en_set.publish_encoders([count_left, count_right])
 
-        # Left encoder
-        dcount_left = count_left - self.prev_count_left
-        radians = 2 * math.pi * (dcount_left / self.TICKS_PER_REVOLUTION)
-        radps_left = radians * per_second
-        self.en_left.publish_radps(radps_left * self.fr_left)
-
-        # Right encoder
-        dcount_right = count_right - self.prev_count_right
-        radians = 2 * math.pi * (dcount_right / self.TICKS_PER_REVOLUTION)
-        radps_right = radians * per_second
-        self.en_right.publish_radps(radps_right * self.fr_right)
-
-        # Update previous sample
-        self.prev_ms = cur_ms
-        self.prev_count_left = count_left
-        self.prev_count_right = count_right
+        # if time.ticks_diff(cur_ms, self.last_rs_pub_ms) > 500:
+        if False:
+            # Publish range data
+            self.rs_set.publish_range_m()
+            self.last_rs_pub_ms = cur_ms
 
         if False:
             logger.info(
@@ -192,10 +245,6 @@ class Controller:
             logger.info(
                 "Encoder count {} - {}".format(
                     self.en_right.name, self.en_right.count))
-            if count_left >= 120:
-                self.left_wheel_cb({"data": 0.01})
-            if count_right >= 120:
-                self.right_wheel_cb({"data": 0.01})
 
 
 ###############################################################################
@@ -215,6 +264,13 @@ class Hadabot:
             # Setup ROS
             self.hadabot_ip_address = CONFIG["network"]["hadabot_ip_address"]
             self.builtin_led = Pin(PIN_CONFIG["led"]["status"], Pin.OUT)
+            if CONFIG["network"]["as_ap"] is True:
+                import network
+                ap = network.WLAN(network.AP_IF)
+                while len(ap.status('stations')) == 0:
+                    logger.info("Waiting for the machine running the " +
+                                "ros2 web bridge to connect to the network...")
+                    time.sleep(5)
             self.ros = Ros(CONFIG["ros2_web_bridge_ip_addr"])
 
             # Set up OLED
@@ -241,6 +297,24 @@ class Hadabot:
             # Controller
             self.controller = Controller(self.ros)
 
+            # Subscribe/publish to ping/ping_ack
+            self.ping_inertia_stamped_topic = Topic(
+                self.ros, "hadabot/ping_inertia_stamped",
+                "geometry_msgs/InertiaStamped")
+            self.ping_inertia_stamped_topic.subscribe(
+                self.ping_inertia_stamped_cb)
+            self.ping_inertia_stamped_ack_topic = Topic(
+                self.ros, "hadabot/ping_inertia_stamped_ack",
+                "geometry_msgs/InertiaStamped")
+            self.ping_time_reference_topic = Topic(
+                self.ros, "hadabot/ping_time_reference",
+                "sensor_msgs/TimeReference")
+            self.ping_time_reference_topic.subscribe(
+                self.ping_time_reference_cb)
+            self.ping_time_reference_ack_topic = Topic(
+                self.ros, "hadabot/ping_time_reference_ack",
+                "sensor_msgs/TimeReference")
+
             # Subscribe to blink led
             self.blink_led_sub_topic = Topic(
                 self.ros, "hadabot/blink_led", "std_msgs/Int32")
@@ -263,10 +337,8 @@ class Hadabot:
             self.boot_button.irq(trigger=Pin.IRQ_RISING,
                                  handler=self.user_shutdown_cb)
 
-            # Spin timer
-            self.spin_timer = Timer(0)
-            self.spin_timer.init(period=10, mode=Timer.PERIODIC,
-                                 callback=self.spin)
+            # Spin thread
+            _thread.start_new_thread(self.spin, ())
 
         except Exception as ex:
             logger.error("Init exception hit {}".format(str(ex)))
@@ -277,7 +349,17 @@ class Hadabot:
     ###########################################################################
     def user_shutdown_cb(self, pin):
         logger.info("User shutdown invoked")
-        self.shutdown()
+        self.need_shutdown = True
+
+    ###########################################################################
+    def ping_time_reference_cb(self, msg):
+        self.ping_time_reference_ack_topic.publish(Message(msg))
+        self.last_hb_ms = time.ticks_ms()
+
+    ###########################################################################
+    def ping_inertia_stamped_cb(self, msg):
+        self.ping_inertia_stamped_ack_topic.publish(Message(msg))
+        self.last_hb_ms = time.ticks_ms()
 
     ###########################################################################
     def blink_led_cb(self, msg):
@@ -308,40 +390,57 @@ class Hadabot:
         self.oled.show()
 
         if self.ros is not None:
-            self.ros.terminate()
+            try:
+                self.ros.terminate()
+            except Exception:
+                pass
             self.ros = None
 
         self.builtin_led.off()
 
     ###########################################################################
-    def spin(self, tim):
-        try:
-            if self.need_shutdown:
-                raise Exception("Shut down requested")
+    def spin(self):
+        go = True
+        while go:
+            try:
+                if self.need_shutdown:
+                    raise Exception("Shut down requested")
 
-            self.ros.run_once()
+                self.ros.run_once()
 
-            cur_ms = time.ticks_ms()
+                cur_ms = time.ticks_ms()
 
-            # Run the controller
-            if time.ticks_diff(cur_ms, self.last_controller_ms) > 100:
-                self.controller.run_once()
-                self.last_controller_ms = cur_ms
+                # Run the controller
+                if time.ticks_diff(cur_ms, self.last_controller_ms) > 50:
+                    self.controller.run_once()
+                    self.last_controller_ms = cur_ms
 
-            # Publish heartbeat message
-            if time.ticks_diff(cur_ms, self.last_hb_ms) > 5000:
-                # logger.info("Encoder left - {}".format(en_count_left))
-                # logger.info("Encoder right - {}".format(en_count_right))
-                self.log_info.publish(Message(
-                    "Hadabot heartbeat - IP {}".format(
-                        self.hadabot_ip_address)))
-                self.last_hb_ms = cur_ms
+                # Publish heartbeat message
+                if time.ticks_diff(cur_ms, self.last_hb_ms) > 5000:
+                    # logger.info("Encoder left - {}".format(en_count_left))
+                    # logger.info("Encoder right - {}".format(en_count_right))
+                    # self.log_info.publish(Message(
+                    #    "Hadabot heartbeat - IP {}".format(
+                    #        self.hadabot_ip_address)))
+                    self.log_info.publish(Message(str(cur_ms)))
+                    self.last_hb_ms = cur_ms
 
-        except Exception as ex:
-            logger.error("Spin exception hit {}".format(str(ex)))
-            tim.deinit()
-            self.blink_led(3, end_off=True)
-            self.shutdown()
+            except Exception as ex:
+                logger.error("Spin exception hit {}".format(str(ex)))
+                go = False
+
+                # If this was not a user triggered shutdown then reset
+                if self.need_shutdown is False:
+                    logger.error(
+                        "Soft resetting doesn't quite work so just shutdown")
+                    # machine.soft_reset()
+                else:
+                    ex = None  # User requested shutdown
+
+                self.shutdown()
+
+                if ex is not None:
+                    raise ex
 
 
 ###############################################################################
