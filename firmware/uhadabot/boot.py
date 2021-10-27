@@ -12,6 +12,54 @@ import time
 CONFIG_FILE = "hb.json"
 CONFIG = None
 
+PIN_CONFIG = {
+    "button": {"boot": 0},
+    "led": {"status": 2},  # 5 - p4r
+    "power": {"sensors": 27},
+    "i2c": {"scl": 22, "sda": 21},
+    "left": {
+        "motor": {"pwm": 18, "fr": 19},
+        "encoder": {
+            "a": 15, "b": 39,
+            "ppr": 1080  # 1:90 * 12 -- 1:45 * 3
+        }
+    },
+    "right": {
+        "motor": {"pwm": 13, "fr": 14},
+        "encoder": {
+            "a": 4, "b": 25,
+            "ppr": 1080
+        }
+    },
+    "range_sensors": [
+        {
+            "label": "front", "pin": 32,
+            "ori_rpy_deg": [0, 0, 0],
+            "pos_xyz_m": [0.1, 0, 0]
+        },
+        {
+            "label": "front_left", "pin": 33,
+            "ori_rpy_deg": [0, 0, 25],
+            "pos_xyz_m": [0.07, 0.075, 0]
+        },
+        {
+            "label": "front_right", "pin": 34,
+            "ori_rpy_deg": [0, 0, 360-25],
+            "pos_xyz_m": [0.07, -0.075, 0]
+        },
+        {
+            "label": "back_left", "pin": 35,
+            "ori_rpy_deg": [0, 0, 90],
+            "pos_xyz_m": [-0.09, 0.07, 0]
+        },
+        {
+            "label": "back_right", "pin": 36,
+            "ori_rpy_deg": [0, 0, 270],
+            "pos_xyz_m": [-0.09, -0.07, 0]
+        },
+    ]
+}
+
 
 ###############################################################################
 def do_install_requirements():
@@ -34,28 +82,51 @@ def do_start_network():
             "then re-upload the file to the ESP32 board.".format(
                 CONFIG_FILE))
 
-    led_pin = machine.Pin(2, machine.Pin.OUT)
-    if not sta_if.isconnected():
-        print('Connecting to network {}...'.format(CONFIG["network"]["ssid"]))
-        sta_if.active(True)
-        sta_if.connect(CONFIG["network"]["ssid"],
-                       CONFIG["network"]["password"])
-        while not sta_if.isconnected():
-            print('Waiting for network to connect...')
+    led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
+    ifconfig = None
+    if 'as_ap' in CONFIG["network"] and CONFIG["network"]["as_ap"] is True:
+        ap = network.WLAN(network.AP_IF)
+        ap.active(True)
+        ap.ifconfig(('192.168.86.1', '255.255.255.0',
+                     '192.168.86.1', '8.8.8.8'))
+        ap.config(essid=CONFIG["network"]["ssid"],
+                  password=CONFIG["network"]["password"],
+                  authmode=network.AUTH_WPA_WPA2_PSK,
+                  max_clients=20)
+
+        while ap.active() is False:
+            print('Waiting for AP to become active...')
             led_pin.on()
             time.sleep(0.5)
             led_pin.off()
             time.sleep(0.5)
-            pass
-    ifconfig = sta_if.ifconfig()
-    print('Network connected. Config: ', ifconfig)
+
+        ifconfig = ap.ifconfig()
+        print('AP set up complete. Config: ', ifconfig)
+    else:
+        CONFIG["network"]["as_ap"] = False
+        if not sta_if.isconnected():
+            print('Connecting to network {}...'.format(
+                CONFIG["network"]["ssid"]))
+            sta_if.active(True)
+            sta_if.connect(CONFIG["network"]["ssid"],
+                           CONFIG["network"]["password"])
+            while not sta_if.isconnected():
+                print('Waiting for network to connect...')
+                led_pin.on()
+                time.sleep(0.5)
+                led_pin.off()
+                time.sleep(0.5)
+
+        ifconfig = sta_if.ifconfig()
+        print('Network connected. Config: ', ifconfig)
     CONFIG["network"]["hadabot_ip_address"] = ifconfig[0]
     led_pin.on()
 
 
 ###############################################################################
 def do_read_config():
-    global CONFIG
+    global CONFIG, PIN_CONFIG
     global CONFIG_FILE
 
     if CONFIG_FILE in os.listdir():
@@ -67,6 +138,18 @@ def do_read_config():
             r = f.read()
         CONFIG = json.loads(c)
         f.close()
+
+        # LED?
+        try:
+            led_gpio = CONFIG["pin_config"]["led"]["status"]
+            PIN_CONFIG["led"]["status"] = led_gpio
+
+            # Turn off core LED
+            led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
+            led_pin.off()
+        except Exception:
+            pass
+
     else:
         raise Exception("Could not find a {} config file".format(CONFIG_FILE))
 
@@ -83,12 +166,25 @@ def do_setup():
 
 ###############################################################################
 def do_initial_prep():
+    # Turn off all motors
+    if True:
+        for motor_pin in [
+                PIN_CONFIG["left"]["motor"]["pwm"],
+                PIN_CONFIG["right"]["motor"]["pwm"]]:
+            pmotor = machine.PWM(machine.Pin(motor_pin))
+            pmotor.duty(0)
+        for motor_pin in [
+                PIN_CONFIG["left"]["motor"]["fr"],
+                PIN_CONFIG["right"]["motor"]["fr"]]:
+            pmotor = machine.Pin(motor_pin, machine.Pin.OUT)
+            pmotor.off()
+
     # Turn off core LED
-    led_pin = machine.Pin(2, machine.Pin.OUT)
+    led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
     led_pin.off()
 
     # Need to move some files over to root directory
-    core_files = ["webrepl_cfg.py", CONFIG_FILE, "main.py"]
+    core_files = ["webrepl_cfg.py", CONFIG_FILE, "main.py", "ssd1306.py"]
     need_copy = False
     need_reset = False
 

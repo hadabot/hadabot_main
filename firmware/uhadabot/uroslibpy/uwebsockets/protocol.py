@@ -259,3 +259,9 @@ class Websocket:
             LOGGER.debug("Connection closed")
         self.open = False
         self.sock.close()
+
+
+    # NEW
+    def send_ping(self):
+        assert self.open
+        self.write_frame(OP_PING, "")

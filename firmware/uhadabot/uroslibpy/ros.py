@@ -3,6 +3,7 @@
 from .uwebsockets import client
 import json
 import logging
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,9 @@ class Ros:
         self._event_callbacks = {}
 
         self.connect()
+
+        # Last websocket ping / pong packet sent - so connection doesn't close
+        self._ws_last_ping_ms = time.ticks_ms()
 
     ###########################################################################
     @property
@@ -92,32 +96,39 @@ class Ros:
             self._ws.setblocking(0)
             self._ws_blocking = False
 
+        # Send ping every so often
+        cur_ms = time.ticks_ms()
+        if time.ticks_diff(cur_ms, self._ws_last_ping_ms) > 1000:
+            self._ws.send_ping()
+            self._ws_last_ping_ms = cur_ms
+
         # Get any responses from server
-        rval = self._ws.recv()
+        for n_loops in range(20):
+            rval = self._ws.recv()
 
-        if rval == "":
-            return
+            if rval == "" or rval is None:
+                return
 
-        logger.info("Received {}".format(rval))
-        frame = json.loads(rval)
+            logger.info("Received {}".format(rval))
+            frame = json.loads(rval)
 
-        if frame["op"] == "publish":
-            topic = frame["topic"]
-            msg = frame["msg"]
+            if frame["op"] == "publish":
+                topic = frame["topic"]
+                msg = frame["msg"]
 
-            if topic not in self._event_callbacks:
-                logger.error(
-                    "Why did we receive this publish frame even though "
-                    "we never subscribed to it - {}".format(rval))
+                if topic not in self._event_callbacks:
+                    logger.error(
+                        "Why did we receive this publish frame even though "
+                        "we never subscribed to it - {}".format(rval))
 
-            if len(self._event_callbacks[topic]) == 0:
-                logger.error(
-                    "There are no callbacks registered for this publish "
-                    "frame - {}".format(rval))
+                if len(self._event_callbacks[topic]) == 0:
+                    logger.error(
+                        "There are no callbacks registered for this publish "
+                        "frame - {}".format(rval))
 
-            # Make callbacks
-            for cb in self._event_callbacks[topic]:
-                cb(msg)
+                # Make callbacks
+                for cb in self._event_callbacks[topic]:
+                    cb(msg)
 
     ###########################################################################
     def run_forever(self):
