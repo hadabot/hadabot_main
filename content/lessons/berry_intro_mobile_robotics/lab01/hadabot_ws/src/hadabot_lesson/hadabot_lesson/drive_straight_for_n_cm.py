@@ -4,16 +4,22 @@ from rclpy.node import Node
 from std_msgs.msg import Float32, Int32MultiArray
 
 
-class DriveStraightForNSecs(Node):
+class DriveStraightForNCm(Node):
 
     ###########################################################################
     # HADABOT LESSON TO-DO
-    # Change this class constant to change the time to stop
+    # Change the following class constants
+    # TICKS_PER_CM - enter the value you measured
+    # DRIVE_FOR_N_CM - the number of centimeters you want to drive forward
     ###########################################################################
-    STOP_AFTER_N_SECONDS = 2
+    TICKS_PER_CM = 2
+    DRIVE_FOR_N_CM = 1
+
+    # Wheel power (shouldn't be slower than 0.7 or else the motor won't spin)
+    OPT_WHEEL_POWER = 1.0
 
     def __init__(self):
-        super().__init__('drive_straight_for_n_secs')
+        super().__init__('drive_straight_for_n_cm')
         self.wheel_power_pub_left_ = self.create_publisher(
             Float32, '/hadabot/wheel_power_left', 10)
         self.wheel_power_pub_right_ = self.create_publisher(
@@ -26,12 +32,17 @@ class DriveStraightForNSecs(Node):
         self.encoder_count_right_ = 0
 
         self.get_logger().info('Driving Motor Forward')
-        self.publish_wheel_power(1.0, 1.0)
+        self.publish_wheel_power(self.OPT_WHEEL_POWER, self.OPT_WHEEL_POWER)
         self.future = rclpy.task.Future()
 
     def encoder_callback(self, msg):
         self.encoder_count_left_ += msg.data[0]
         self.encoder_count_right_ += msg.data[1]
+
+        n_ticks = float(self.TICKS_PER_CM) * float(self.DRIVE_FOR_N_CM)
+        if self.encoder_count_left_ >= n_ticks or \
+                self.encoder_count_right_ >= n_ticks:
+            self.stop_motor()
 
     def publish_wheel_power(self, power_left_f32, power_right_f32):
         msg_left = Float32()
@@ -41,22 +52,22 @@ class DriveStraightForNSecs(Node):
         msg_right.data = power_right_f32
         self.wheel_power_pub_left_.publish(msg_right)
 
-    def stop_motor_callback(self):
-        self.timer.cancel()
+    def stop_motor(self):
         self.publish_wheel_power(0.0, 0.0)
         self.get_logger().info('Stopping Motors')
+
+        left_cm = float(self.encoder_count_left_) / float(self.TICKS_PER_CM)
+        right_cm = float(self.encoder_count_right_) / float(self.TICKS_PER_CM)
         self.get_logger().info(
-            f'Left encoder tick count after {self.STOP_AFTER_N_SECONDS} '
-            f'seconds: {self.encoder_count_left_}')
+            f'Left wheel traveled {left_cm} cm')
         self.get_logger().info(
-            f'Right encoder tick count after {self.STOP_AFTER_N_SECONDS} '
-            f'seconds: {self.encoder_count_right_}')
+            f'Left wheel traveled {right_cm} cm')
         self.future.set_result(True)
 
 
 def main(args=None):
     rclpy.init(args=args)
-    hadabot_node = DriveStraightForNSecs()
+    hadabot_node = DriveStraightForNCm()
     rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future)
 
     # Destroy the node explicitly
