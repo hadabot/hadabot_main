@@ -41,7 +41,7 @@ class DriveStraightForNSecs(Node):
         self.wheel_power_pub_left_.publish(msg_left)
         msg_right = Float32()
         msg_right.data = power_right_f32
-        self.wheel_power_pub_left_.publish(msg_right)
+        self.wheel_power_pub_right_.publish(msg_right)
 
     def stop_motor_callback(self):
         self.timer.cancel()
