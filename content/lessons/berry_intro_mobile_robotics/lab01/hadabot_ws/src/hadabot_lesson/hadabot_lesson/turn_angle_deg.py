@@ -36,7 +36,7 @@ class TurnAngleDeg(Node):
             'Driving Left Wheel Forward, Right Wheel Backwards')
         self.publish_wheel_power(
             self.OPT_WHEEL_POWER, -1.0 * self.OPT_WHEEL_POWER)
-        self.future = rclpy.task.Future()
+        self.future_ = rclpy.task.Future()
 
     def encoder_callback(self, msg):
         self.encoder_count_left_ += msg.data[0]
@@ -65,13 +65,13 @@ class TurnAngleDeg(Node):
             f'Left wheel traveled {left_cm} cm')
         self.get_logger().info(
             f'Right wheel traveled {right_cm} cm')
-        self.future.set_result(True)
+        self.future_.set_result(True)
 
 
 def main(args=None):
     rclpy.init(args=args)
     hadabot_node = TurnAngleDeg()
-    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future)
+    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future_)
 
     # Destroy the node explicitly
     hadabot_node.destroy_node()

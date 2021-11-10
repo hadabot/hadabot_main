@@ -37,13 +37,13 @@ class DriveSquarePattern(Node):
         self.encoder_count_left_ = 0
         self.encoder_count_right_ = 0
 
-        self.drive_square_n_edges_drawn = 0
-        self.drive_square_state_machine = self.STATE_DRIVE_STRAIGHT
+        self.drive_square_n_edges_drawn_ = 0
+        self.drive_square_state_machine_ = self.STATE_DRIVE_STRAIGHT
 
         self.get_logger().info('Driving Motor Forward Along Left Edge')
         self.drive_straight()
 
-        self.future = rclpy.task.Future()
+        self.future_ = rclpy.task.Future()
 
     ###########################################################################
     #
@@ -67,30 +67,30 @@ class DriveSquarePattern(Node):
         self.encoder_count_left_ += msg.data[0]
         self.encoder_count_right_ += msg.data[1]
 
-        if self.drive_square_state_machine == self.STATE_DRIVE_STRAIGHT:
+        if self.drive_square_state_machine_ == self.STATE_DRIVE_STRAIGHT:
             transition = self.drove_for_40cm()
 
             if transition:
-                self.drive_square_n_edges_drawn += 1
-
-                if self.drive_square_n_edges_drawn == \
-                        self.SQUARE_PATTERN_N_EDGES:
-                    # Already drove 4 edges, just stop
-                    self.drive_square_state_machine = self.STATE_DONE
-                    self.stop_motor()
-                else:
-                    # Need to right turn
-                    self.drive_square_state_machine = \
-                        self.STATE_TURN_RIGHT_90_DEG
-                    self.reset_encoder_ticks()
-                    self.turn_right()
-        elif self.drive_square_state_machine == self.STATE_TURN_RIGHT_90_DEG:
+                self.drive_square_state_machine_ = self.STATE_TURN_RIGHT_90_DEG
+                self.reset_encoder_ticks()
+                self.turn_right()
+        elif self.drive_square_state_machine_ == self.STATE_TURN_RIGHT_90_DEG:
             transition = self.turned_right_90deg()
 
             if transition:
-                self.drive_square_state_machine = self.STATE_DRIVE_STRAIGHT
-                self.reset_encoder_ticks()
-                self.drive_straight()
+                self.drive_square_n_edges_drawn_ += 1
+
+                if self.drive_square_n_edges_drawn_ == \
+                        self.SQUARE_PATTERN_N_EDGES:
+                    # Already drove 4 edges, just stop
+                    self.drive_square_state_machine_ = self.STATE_DONE
+                    self.stop_motor()
+                else:
+                    # Need to draw another edge
+                    self.drive_square_state_machine_ = \
+                        self.STATE_DRIVE_STRAIGHT
+                    self.reset_encoder_ticks()
+                    self.drive_straight()
     #
     ###########################################################################
 
@@ -122,13 +122,13 @@ class DriveSquarePattern(Node):
         self.publish_wheel_power(0.0, 0.0)
         self.get_logger().info('Stopped')
 
-        self.future.set_result(True)
+        self.future_.set_result(True)
 
 
 def main(args=None):
     rclpy.init(args=args)
     hadabot_node = DriveSquarePattern()
-    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future)
+    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future_)
 
     # Destroy the node explicitly
     hadabot_node.destroy_node()

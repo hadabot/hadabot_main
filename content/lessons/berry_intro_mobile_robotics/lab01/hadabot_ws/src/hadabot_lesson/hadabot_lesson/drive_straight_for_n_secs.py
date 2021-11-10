@@ -29,7 +29,7 @@ class DriveStraightForNSecs(Node):
         self.timer = self.create_timer(timer_period, self.stop_motor_callback)
         self.get_logger().info('Driving Motor Forward')
         self.publish_wheel_power(1.0, 1.0)
-        self.future = rclpy.task.Future()
+        self.future_ = rclpy.task.Future()
 
     def encoder_callback(self, msg):
         self.encoder_count_left_ += msg.data[0]
@@ -53,13 +53,13 @@ class DriveStraightForNSecs(Node):
         self.get_logger().info(
             f'Right encoder tick count after {self.STOP_AFTER_N_SECONDS} '
             f'seconds: {self.encoder_count_right_}')
-        self.future.set_result(True)
+        self.future_.set_result(True)
 
 
 def main(args=None):
     rclpy.init(args=args)
     hadabot_node = DriveStraightForNSecs()
-    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future)
+    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future_)
 
     # Destroy the node explicitly
     hadabot_node.destroy_node()

@@ -18,6 +18,15 @@ class DriveSquarePattern(Node):
     # Wheel power (shouldn't be slower than 0.7 or else the motor won't spin)
     OPT_WHEEL_POWER = 1.0
 
+    STATE_DRIVE_STRAIGHT_LEFT_EDGE = 1
+    STATE_TURN_RIGHT_90_DEG_UPPER_LEFT = 2
+    STATE_DRIVE_STRAIGHT_TOP_EDGE = 3
+    STATE_TURN_RIGHT_90_DEG_UPPER_RIGHT = 4
+    STATE_DRIVE_STRAIGHT_RIGHT_EDGE = 5
+    STATE_TURN_RIGHT_90_DEG_LOWER_RIGHT = 6
+    STATE_DRIVE_STRAIGHT_BOTTOM_EDGE = 7
+    STATE_TURN_RIGHT_90_DEG_LOWER_LEFT = 8
+
     def __init__(self):
         super().__init__('drive_square_pattern')
         self.wheel_power_pub_left_ = self.create_publisher(
@@ -31,9 +40,11 @@ class DriveSquarePattern(Node):
         self.encoder_count_left_ = 0
         self.encoder_count_right_ = 0
 
+        self.drive_square_state_machine_ = \
+            self.STATE_DRIVE_STRAIGHT_LEFT_EDGE
         self.get_logger().info('Driving Motor Forward')
         self.publish_wheel_power(self.OPT_WHEEL_POWER, self.OPT_WHEEL_POWER)
-        self.future = rclpy.task.Future()
+        self.future_ = rclpy.task.Future()
 
     ###########################################################################
     #
@@ -42,7 +53,7 @@ class DriveSquarePattern(Node):
         self.encoder_count_right_ += msg.data[1]
 
         # State machine
-        if self.drive_square_state_machine == \
+        if self.drive_square_state_machine_ == \
                 self.STATE_DRIVE_STRAIGHT_LEFT_EDGE:
             # HADABOT LESSON TO-DO
             # Implement the condition to transition to the next state
@@ -86,20 +97,13 @@ class DriveSquarePattern(Node):
     def stop_motor(self):
         self.publish_wheel_power(0.0, 0.0)
         self.get_logger().info('Stopping Motors')
-
-        left_cm = float(self.encoder_count_left_) / float(self.TICKS_PER_CM)
-        right_cm = float(self.encoder_count_right_) / float(self.TICKS_PER_CM)
-        self.get_logger().info(
-            f'Left wheel traveled {left_cm} cm')
-        self.get_logger().info(
-            f'Right wheel traveled {right_cm} cm')
-        self.future.set_result(True)
+        self.future_.set_result(True)
 
 
 def main(args=None):
     rclpy.init(args=args)
     hadabot_node = DriveSquarePattern()
-    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future)
+    rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future_)
 
     # Destroy the node explicitly
     hadabot_node.destroy_node()

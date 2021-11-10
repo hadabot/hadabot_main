@@ -24,7 +24,9 @@ setup(
             'drive_straight_for_n_cm = hadabot_lesson.drive_straight_for_n_cm:main',
             'turn_angle_deg = hadabot_lesson.turn_angle_deg:main',
             'drive_square_pattern = hadabot_lesson.drive_square_pattern:main',
-            'solution_drive_square_pattern = hadabot_lesson.solution_drive_square_pattern:main'
+            'solution_drive_square_pattern = hadabot_lesson.solution_drive_square_pattern:main',
+            'drive_circle_pattern = hadabot_lesson.drive_circle_pattern:main',
+            'solution_drive_circle_pattern = hadabot_lesson.solution_drive_circle_pattern:main'
         ],
     },
 )
