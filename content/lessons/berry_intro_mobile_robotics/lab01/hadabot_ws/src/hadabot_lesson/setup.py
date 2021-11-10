@@ -22,7 +22,9 @@ setup(
         'console_scripts': [
             'drive_straight_for_n_secs = hadabot_lesson.drive_straight_for_n_secs:main',
             'drive_straight_for_n_cm = hadabot_lesson.drive_straight_for_n_cm:main',
-            'turn_angle_deg = hadabot_lesson.turn_angle_deg:main'
+            'turn_angle_deg = hadabot_lesson.turn_angle_deg:main',
+            'drive_square_pattern = hadabot_lesson.drive_square_pattern:main',
+            'solution_drive_square_pattern = hadabot_lesson.solution_drive_square_pattern:main'
         ],
     },
 )

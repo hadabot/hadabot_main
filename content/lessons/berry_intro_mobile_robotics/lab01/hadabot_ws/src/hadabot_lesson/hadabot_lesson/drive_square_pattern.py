@@ -4,22 +4,22 @@ from rclpy.node import Node
 from std_msgs.msg import Float32, Int32MultiArray
 
 
-class DriveStraightForNCm(Node):
+class DriveSquarePattern(Node):
 
     ###########################################################################
     # HADABOT LESSON TO-DO
     # Change the following class constants
     # TICKS_PER_CM - enter the value you measured
-    # DRIVE_FOR_N_CM - the number of centimeters you want to drive forward
+    # TURTLE_WHEELBASE_CM - wheelbase of your Turtle
     ###########################################################################
-    TICKS_PER_CM = 1
-    DRIVE_FOR_N_CM = 20  # 40, 60, 80
+    TICKS_PER_CM = 1.0
+    HADABOT_WHEELBASE_CM = 1.0
 
     # Wheel power (shouldn't be slower than 0.7 or else the motor won't spin)
     OPT_WHEEL_POWER = 1.0
 
     def __init__(self):
-        super().__init__('drive_straight_for_n_cm')
+        super().__init__('drive_square_pattern')
         self.wheel_power_pub_left_ = self.create_publisher(
             Float32, '/hadabot/wheel_power_left', 10)
         self.wheel_power_pub_right_ = self.create_publisher(
@@ -35,14 +35,45 @@ class DriveStraightForNCm(Node):
         self.publish_wheel_power(self.OPT_WHEEL_POWER, self.OPT_WHEEL_POWER)
         self.future = rclpy.task.Future()
 
+    ###########################################################################
+    #
     def encoder_callback(self, msg):
         self.encoder_count_left_ += msg.data[0]
         self.encoder_count_right_ += msg.data[1]
 
-        n_ticks = float(self.TICKS_PER_CM) * float(self.DRIVE_FOR_N_CM)
-        if self.encoder_count_left_ >= n_ticks or \
-                self.encoder_count_right_ >= n_ticks:
-            self.stop_motor()
+        # State machine
+        if self.drive_square_state_machine == \
+                self.STATE_DRIVE_STRAIGHT_LEFT_EDGE:
+            # HADABOT LESSON TO-DO
+            # Implement the condition to transition to the next state
+            transition = True
+
+            if transition:
+                self.drive_square_state_machine = \
+                    self.STATE_TURN_RIGHT_90_DEG_UPPER_LEFT
+                self.reset_encoder_ticks()
+                self.turn_right()
+        elif self.drive_square_state_machine == \
+                self.STATE_TURN_RIGHT_90_DEG_UPPER_LEFT:
+            transition = True  # HADABOT LESSON TO-DO
+
+            if transition:
+                self.drive_square_state_machine = \
+                    self.STATE_DRIVE_STRAIGHT_TOP_EDGE
+                self.reset_encoder_ticks()
+                self.drive_straight()
+        elif self.drive_square_state_machine == \
+                self.STATE_DRIVE_STRAIGHT_TOP_EDGE:
+            # HADABOT LESSON TO-DO
+            # Implement all the other transition states
+            # (ie a lot more elif's!)
+            pass
+    #
+    ###########################################################################
+
+    def reset_encoder_ticks(self):
+        self.encoder_count_left_ = 0
+        self.encoder_count_right_ = 0
 
     def publish_wheel_power(self, power_left_f32, power_right_f32):
         msg_left = Float32()
@@ -67,7 +98,7 @@ class DriveStraightForNCm(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    hadabot_node = DriveStraightForNCm()
+    hadabot_node = DriveSquarePattern()
     rclpy.spin_until_future_complete(hadabot_node, hadabot_node.future)
 
     # Destroy the node explicitly

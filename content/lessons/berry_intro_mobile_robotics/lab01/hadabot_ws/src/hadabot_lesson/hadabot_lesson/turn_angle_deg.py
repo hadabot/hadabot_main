@@ -13,14 +13,14 @@ class TurnAngleDeg(Node):
     # DRIVE_FOR_N_CM - cm to drive the left wheel fwd, right wheel backwards,
     #                  effectively turning the Turtle in place for some angle
     ###########################################################################
-    TICKS_PER_CM = 40.35
-    DRIVE_FOR_N_CM = 10.72
+    TICKS_PER_CM = 1
+    DRIVE_FOR_N_CM = 1  # HINT: use the circumference = pi * diameter equation
 
     # Wheel power (shouldn't be slower than 0.7 or else the motor won't spin)
     OPT_WHEEL_POWER = 1.0
 
     def __init__(self):
-        super().__init__('drive_straight_for_n_cm')
+        super().__init__('turn_angle_deg')
         self.wheel_power_pub_left_ = self.create_publisher(
             Float32, '/hadabot/wheel_power_left', 10)
         self.wheel_power_pub_right_ = self.create_publisher(
