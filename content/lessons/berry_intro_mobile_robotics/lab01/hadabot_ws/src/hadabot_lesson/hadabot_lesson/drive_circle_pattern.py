@@ -11,7 +11,7 @@ class DriveCirclePattern(Node):
     # Change the following class constants
     # TICKS_PER_CM - enter the value you measured
     ###########################################################################
-    TICKS_PER_CM = 40.35
+    TICKS_PER_CM = 1.0
 
     # Wheel power (shouldn't be slower than 0.7 or else the motor won't spin)
     OPT_WHEEL_POWER = 1.0
