@@ -17,7 +17,7 @@ class DriveCirclePattern(Node):
     OPT_WHEEL_POWER = 1.0
 
     def __init__(self):
-        super().__init__('solution_drive_circle_pattern')
+        super().__init__('drive_circle_pattern')
         self.wheel_power_pub_left_ = self.create_publisher(
             Float32, '/hadabot/wheel_power_left', 10)
         self.wheel_power_pub_right_ = self.create_publisher(
