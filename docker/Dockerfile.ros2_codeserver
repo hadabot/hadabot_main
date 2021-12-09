@@ -13,6 +13,7 @@ RUN : "${USER_ID:?Build argument needs to be set and non-empty.}" && \
     : "${GROUP_ID:?Build argument needs to be set and non-empty.}"
 
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y locales curl gnupg2 lsb-release wget git sudo unzip && \
     locale-gen en_US en_US.UTF-8 && \
     update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 && \
@@ -37,6 +38,8 @@ RUN apt-get update && \
 # Error with a ros1-bridge dependency if we install ros-eloquent-ros2bag*
 # so install each package individually igoring the package with the 
 # ros1-bridge dependency
+# Actually according to https://index.ros.org/r/rosbag2/, we only need
+# ros2bag and rosbag2-transport for ROS 2 (need to verify this claim)
 RUN apt-get update && \
     apt-get install -y \
       ros-${ROS_DISTRO}-image-common \
