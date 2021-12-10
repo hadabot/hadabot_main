@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'encoder_ticks_per_second = hadabot_lesson_py.encoder_ticks_per_second:main'
+            'encoder_ticks_per_sec = hadabot_lesson_py.encoder_ticks_per_sec:main'
         ],
     },
 )
