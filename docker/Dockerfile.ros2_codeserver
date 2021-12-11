@@ -143,9 +143,11 @@ COPY --chown=hadabot:hadabot ./config_files/vscode-ros-dev-vsix.zip ./
 RUN unzip vscode-ros-dev-vsix.zip && \
     code-server --install-extension vscode-ros-dev.vsix && \
     rm vscode-ros-dev*.*
+    
+ENV PATH=$PATH:/home/hadabot/.local/bin
 
-COPY --chown=hadabot:hadabot ./config_files/coder.json .local/share/code-server/
 COPY --chown=hadabot:hadabot ./config_files/settings.json .local/share/code-server/User/
+COPY --chown=hadabot:hadabot ./config_files/coder.json .local/share/code-server/
 
 USER root
 

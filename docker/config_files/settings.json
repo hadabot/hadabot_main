@@ -4,7 +4,19 @@
   "C_Cpp.updateChannel": "Insiders",
   "extensions.autoUpdate": false,
   "[cpp]": {
-    "editor.defaultFormatter": "ms-vscode.cpptools"
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true,
   },
-  "workbench.startupEditor": "none"
+  "[jsonc]": {
+    "editor.formatOnSave": true,
+  },
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.formatOnSave": true,
+  },
+  "workbench.startupEditor": "none",
+  "python.formatting.autopep8Args": [
+    "--experimental",
+    "-v"
+  ]
 }
