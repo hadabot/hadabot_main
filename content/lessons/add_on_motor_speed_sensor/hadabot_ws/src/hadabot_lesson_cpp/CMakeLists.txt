@@ -17,16 +17,26 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
 add_executable(encoder_ticks_per_sec src/encoder_ticks_per_sec.cpp)
+ament_target_dependencies(encoder_ticks_per_sec rclcpp std_msgs)
 target_include_directories(encoder_ticks_per_sec PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-install(TARGETS encoder_ticks_per_sec
+add_executable(
+  solution_encoder_ticks_per_sec src/solution_encoder_ticks_per_sec.cpp)
+ament_target_dependencies(solution_encoder_ticks_per_sec rclcpp std_msgs)
+target_include_directories(solution_encoder_ticks_per_sec PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
+install(TARGETS encoder_ticks_per_sec solution_encoder_ticks_per_sec
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

@@ -9,7 +9,7 @@ class EncoderTicksPerSec(Node):
     def __init__(self):
         super().__init__('encoder_ticks_per_sec_py')
 
-        ########################################################################
+        #######################################################################
         # HADABOT LESSON TO-DO
         # Create a subscriber to the '/hadabot/wheel_encoders' Int32MultiArray
         #   topic, which calls the self.encoder_tick_cb callback
@@ -25,13 +25,13 @@ class EncoderTicksPerSec(Node):
         # Other useful ROS client library API's we used
         # - self.get_clock().now() - to get the current time
         # - the threading.Lock() mutex to prevent the publisher and
-        #   subscriber from modifying shared variables
+        #   subscriber from modifying shared variables at the same time
         #
         # References to help you:
         # - https://docs.ros.org/en/foxy/Tutorials/Writing-A-Simple-Py-Publisher-And-Subscriber.html
         # - https://docs.ros2.org/foxy/api/rclpy/index.html
         # - https://github.com/ros2/rclpy
-        ########################################################################
+        #######################################################################
 
     def encoder_tick_cb(self, msg):
         pass
