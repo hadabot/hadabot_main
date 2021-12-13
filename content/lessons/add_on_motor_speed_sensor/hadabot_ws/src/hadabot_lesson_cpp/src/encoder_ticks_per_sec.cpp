@@ -44,6 +44,7 @@ public:
 private:
   void encoder_tick_cb(const std_msgs::msg::Int32MultiArray::SharedPtr msg)
   {
+    RCLCPP_INFO(this->get_logger(), "Left tick: '%s'", msg->data[0]);
   }
 
   void publish_left_ticks_per_sec_cb()
