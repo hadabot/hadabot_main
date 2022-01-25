@@ -33,27 +33,27 @@ PIN_CONFIG = {
     },
     "range_sensors": [
         {
-            "label": "front", "pin": 32,
+            "label": "f", "pin": 32,
             "ori_rpy_deg": [0, 0, 0],
             "pos_xyz_m": [0.1, 0, 0]
         },
         {
-            "label": "front_left", "pin": 33,
+            "label": "fl", "pin": 33,
             "ori_rpy_deg": [0, 0, 25],
             "pos_xyz_m": [0.07, 0.075, 0]
         },
         {
-            "label": "front_right", "pin": 34,
+            "label": "fr", "pin": 34,
             "ori_rpy_deg": [0, 0, 360-25],
             "pos_xyz_m": [0.07, -0.075, 0]
         },
         {
-            "label": "back_left", "pin": 35,
+            "label": "bl", "pin": 35,
             "ori_rpy_deg": [0, 0, 90],
             "pos_xyz_m": [-0.09, 0.07, 0]
         },
         {
-            "label": "back_right", "pin": 36,
+            "label": "br", "pin": 36,
             "ori_rpy_deg": [0, 0, 270],
             "pos_xyz_m": [-0.09, -0.07, 0]
         },
@@ -82,44 +82,58 @@ def do_start_network():
             "then re-upload the file to the ESP32 board.".format(
                 CONFIG_FILE))
 
-    led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
+    led_pin = machine.Pin(
+        PIN_CONFIG["led"]["status"],
+        machine.Pin.OUT)
     ifconfig = None
     if 'as_ap' in CONFIG["network"] and CONFIG["network"]["as_ap"] is True:
         ap = network.WLAN(network.AP_IF)
         ap.active(True)
-        ap.ifconfig(('192.168.86.1', '255.255.255.0',
-                     '192.168.86.1', '8.8.8.8'))
-        ap.config(essid=CONFIG["network"]["ssid"],
-                  password=CONFIG["network"]["password"],
-                  authmode=network.AUTH_WPA_WPA2_PSK,
-                  max_clients=20)
+        ap.ifconfig(
+            ('192.168.86.1', '255.255.255.0',
+             '192.168.86.1', '8.8.8.8'))
+        ap.config(
+            essid=CONFIG["network"]["ssid"],
+            password=CONFIG["network"]
+            ["password"],
+            authmode=network.AUTH_WPA_WPA2_PSK,
+            max_clients=20)
 
         while ap.active() is False:
-            print('Waiting for AP to become active...')
+            print(
+                'Waiting for AP to become active...')
             led_pin.on()
             time.sleep(0.5)
             led_pin.off()
             time.sleep(0.5)
 
         ifconfig = ap.ifconfig()
-        print('AP set up complete. Config: ', ifconfig)
+        print(
+            'AP set up complete. Config: ',
+            ifconfig)
     else:
         CONFIG["network"]["as_ap"] = False
         if not sta_if.isconnected():
             print('Connecting to network {}...'.format(
                 CONFIG["network"]["ssid"]))
             sta_if.active(True)
-            sta_if.connect(CONFIG["network"]["ssid"],
-                           CONFIG["network"]["password"])
+            sta_if.connect(
+                CONFIG["network"]
+                ["ssid"],
+                CONFIG["network"]
+                ["password"])
             while not sta_if.isconnected():
-                print('Waiting for network to connect...')
+                print(
+                    'Waiting for network to connect...')
                 led_pin.on()
                 time.sleep(0.5)
                 led_pin.off()
                 time.sleep(0.5)
 
         ifconfig = sta_if.ifconfig()
-        print('Network connected. Config: ', ifconfig)
+        print(
+            'Network connected. Config: ',
+            ifconfig)
     CONFIG["network"]["hadabot_ip_address"] = ifconfig[0]
     led_pin.on()
 
@@ -141,17 +155,21 @@ def do_read_config():
 
         # LED?
         try:
-            led_gpio = CONFIG["pin_config"]["led"]["status"]
+            led_gpio = CONFIG["pin_config"][
+                "led"]["status"]
             PIN_CONFIG["led"]["status"] = led_gpio
 
             # Turn off core LED
-            led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
+            led_pin = machine.Pin(
+                PIN_CONFIG["led"]["status"],
+                machine.Pin.OUT)
             led_pin.off()
         except Exception:
             pass
 
     else:
-        raise Exception("Could not find a {} config file".format(CONFIG_FILE))
+        raise Exception(
+            "Could not find a {} config file".format(CONFIG_FILE))
 
 
 ###############################################################################
@@ -159,7 +177,8 @@ def do_setup():
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.info("Welcome to Hadabot - www.hadabot.com")
+    logger.info(
+        "Welcome to Hadabot - www.hadabot.com")
 
     webrepl.start()
 
@@ -169,22 +188,32 @@ def do_initial_prep():
     # Turn off all motors
     if True:
         for motor_pin in [
-                PIN_CONFIG["left"]["motor"]["pwm"],
-                PIN_CONFIG["right"]["motor"]["pwm"]]:
-            pmotor = machine.PWM(machine.Pin(motor_pin))
+            PIN_CONFIG["left"]
+            ["motor"]["pwm"],
+            PIN_CONFIG["right"]
+                ["motor"]["pwm"]]:
+            pmotor = machine.PWM(
+                machine.Pin(motor_pin))
             pmotor.duty(0)
         for motor_pin in [
-                PIN_CONFIG["left"]["motor"]["fr"],
-                PIN_CONFIG["right"]["motor"]["fr"]]:
-            pmotor = machine.Pin(motor_pin, machine.Pin.OUT)
+            PIN_CONFIG["left"]
+            ["motor"]["fr"],
+            PIN_CONFIG["right"]
+                ["motor"]["fr"]]:
+            pmotor = machine.Pin(
+                motor_pin, machine.Pin.OUT)
             pmotor.off()
 
     # Turn off core LED
-    led_pin = machine.Pin(PIN_CONFIG["led"]["status"], machine.Pin.OUT)
+    led_pin = machine.Pin(
+        PIN_CONFIG["led"]["status"],
+        machine.Pin.OUT)
     led_pin.off()
 
     # Need to move some files over to root directory
-    core_files = ["webrepl_cfg.py", CONFIG_FILE, "main.py", "ssd1306.py"]
+    core_files = [
+        "webrepl_cfg.py", CONFIG_FILE, "main.py",
+        "ssd1306.py"]
     need_copy = False
     need_reset = False
 
@@ -192,13 +221,15 @@ def do_initial_prep():
     # to update the firmware from uhadabot directory
     for core_file in core_files:
         if core_file not in os.listdir():
-            print("Need to move {} to root folder".format(core_file))
+            print("Need to move {} to root folder".format(
+                core_file))
             need_copy = True
 
     # If all of the core files exist in the uhadabot directory then we
     # also need to copy them over - not it's all-or-no-copy
     ls_uhadabot = os.listdir("uhadabot")
-    if all([(core_file in ls_uhadabot) for core_file in core_files]):
+    if all([(core_file in ls_uhadabot)
+            for core_file in core_files]):
         print(
             "All core files in uhadabot, so we will update the entire folder")
         need_copy = True
@@ -213,8 +244,8 @@ def do_initial_prep():
 
             if core_file in ls_uhadabot:
                 # Move the file from libary folder out to root
-                print(
-                    "Moving {} from uhadabot to root".format(core_file))
+                print("Moving {} from uhadabot to root".format(
+                    core_file))
                 os.rename(
                     "/uhadabot/{}".format(core_file), "/{}".format(core_file))
             need_reset = True

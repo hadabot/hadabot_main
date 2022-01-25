@@ -1,0 +1,19 @@
+rosbag2_bagfile_information:
+  version: 4
+  storage_identifier: sqlite3
+  relative_file_paths:
+    - rosbag2_ir_sensors_12bit_adc_0.db3
+  duration:
+    nanoseconds: 12112203537
+  starting_time:
+    nanoseconds_since_epoch: 1643068043159037813
+  message_count: 24
+  topics_with_message_count:
+    - topic_metadata:
+        name: /hadabot/ir_sensors_12bit_adc
+        type: std_msgs/msg/Int32MultiArray
+        serialization_format: cdr
+        offered_qos_profiles: "- history: 1\n  depth: 10\n  reliability: 1\n  durability: 2\n  deadline:\n    sec: 9223372036\n    nsec: 854775807\n  lifespan:\n    sec: 9223372036\n    nsec: 854775807\n  liveliness: 1\n  liveliness_lease_duration:\n    sec: 9223372036\n    nsec: 854775807\n  avoid_ros_namespace_conventions: false"
+      message_count: 24
+  compression_format: ""
+  compression_mode: ""
