@@ -9,9 +9,9 @@ class IrSensorDriver(Node):
     # 12-bit ADC: 0 to 4095 = 3.6v max
     # 490 (0.43v) to 2740 (2.41v) - 150 (0.13v) intervals - 16 slots
     DIST_TABLE_M = [
-        0.805, 0.589, 0.460, 0.375, 0.315, 0.271,
+        0.80, 0.589, 0.460, 0.375, 0.315, 0.271,
         0.237, 0.210, 0.188, 0.171, 0.156, 0.143,
-        0.132, 0.123, 0.114, 0.107]
+        0.132, 0.123, 0.114, 0.10]
 
     def __init__(self):
         super().__init__('solution_ir_sensor_driver_py')
@@ -50,7 +50,7 @@ class IrSensorDriver(Node):
     def publish_range(
             self, range_pub, range_12bit_adc,
             frame_id):
-        # Characteristics and labels of ir range sensor
+        # Field of view characteristic of the ir range sensor
         fov_half_radians = (3.0/360.0) * 6.28
 
         val = max(min(range_12bit_adc, 2739), 490)
@@ -70,7 +70,7 @@ class IrSensorDriver(Node):
         range_msg.radiation_type = Range.INFRARED
         range_msg.field_of_view = fov_half_radians
         range_msg.min_range = 0.1
-        range_msg.max_range = 0.81
+        range_msg.max_range = 0.80
         range_msg.range = dist
         range_pub.publish(range_msg)
 
