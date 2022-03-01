@@ -115,7 +115,8 @@ RUN apt-get update && apt-get install -y \
     apt-get install -y \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
         ros-${ROS_DISTRO}-navigation2 \
-        ros-${ROS_DISTRO}-nav2-bringup && \
+        ros-${ROS_DISTRO}-nav2-bringup \
+        ros-${ROS_DISTRO}-tf-transformations && \
     rm -rf /var/lib/apt/lists/*
 
 USER hadabot
@@ -134,7 +135,7 @@ RUN wget https://github.com/microsoft/vscode-cpptools/releases/download/1.0.1/cp
     rm cpptools-linux.vsix && \
     rm ms-python-release.vsix && \
     code-server --install-extension twxs.cmake && \
-    /usr/bin/python3 -m pip install -U numpy mypy autopep8 flake8 jupyterlab pandas --user && \
+    /usr/bin/python3 -m pip install -U numpy mypy autopep8 flake8 jupyterlab pandas transforms3d --user && \
     echo "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh" >> .bashrc
 
 
