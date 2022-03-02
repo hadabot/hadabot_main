@@ -20,18 +20,15 @@ class Lab01RangeSensorDriver(Node):
 
     def timer_callback(self):
         ls_msg = LaserScan()
-        ls_msg.header.stamp = self.get_clock().now().to_msg()
-        ls_msg.header.frame_id = 'laser'
-        ls_msg.angle_min = -1.0 * (np.pi * 0.5)
-        ls_msg.angle_max = 1.0 * (np.pi * 0.5)
-        ls_msg.angle_increment = (
-            (ls_msg.angle_max - ls_msg.angle_min)/float(len(self.scan)-1))
-        ls_msg.time_increment = 0.0
-        ls_msg.scan_time = 0.1
-        ls_msg.range_min = 0.0
-        ls_msg.range_max = 1000000.0
-        ls_msg.ranges = self.scan
-        ls_msg.intensities = []
+
+        ######################################################################
+        # HADABOT LESSON TO-DO
+        #
+        # Using the solution_lab01_range_sensor_driver.py as reference,
+        # implement the code to publish the laser scan data as a LaserScan
+        # ROS message
+        ######################################################################
+
         self.laser_pub_.publish(ls_msg)
 
 

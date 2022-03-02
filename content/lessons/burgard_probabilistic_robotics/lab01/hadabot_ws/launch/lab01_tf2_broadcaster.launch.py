@@ -8,8 +8,8 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='hadabot_lesson',
-            executable='solution_lab01_tf2_broadcaster',
-            name='solution_tf2_broadcaster'
+            executable='lab01_tf2_broadcaster',
+            name='tf2_broadcaster'
         ),
         Node(
             package='rviz2',

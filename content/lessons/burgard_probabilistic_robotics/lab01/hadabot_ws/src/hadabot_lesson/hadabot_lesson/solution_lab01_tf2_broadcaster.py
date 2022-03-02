@@ -10,7 +10,7 @@ from geometry_msgs.msg import TransformStamped
 class Lab01TF2Broadcaster(Node):
 
     def __init__(self):
-        super().__init__('lab01_tf2_broadcaster')
+        super().__init__('solution_lab01_tf2_broadcaster')
 
         static_tf_pub = StaticTransformBroadcaster(self)
 

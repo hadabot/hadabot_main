@@ -14,6 +14,8 @@ setup(
     entry_points={
         'console_scripts':
         [
+            'lab01_tf2_broadcaster = hadabot_lesson.lab01_tf2_broadcaster:main',
+            'lab01_range_sensor_driver = hadabot_lesson.lab01_range_sensor_driver:main',
             'solution_lab01_tf2_broadcaster = hadabot_lesson.solution_lab01_tf2_broadcaster:main',
             'solution_lab01_range_sensor_driver = hadabot_lesson.solution_lab01_range_sensor_driver:main']
     },)
