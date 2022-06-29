@@ -1,21 +1,13 @@
 import numpy as np
 import scipy.stats
 import matplotlib.pyplot as plt
-from read_data import read_world, read_sensor_data
 
-#add random seed for generating comparable pseudo random numbers
-np.random.seed(123)
-
-#plot preferences, interactive plotting mode
-plt.axis([-1, 12, 0, 10])
-plt.ion()
-plt.show()
 
 def plot_state(particles, landmarks, map_limits):
     # Visualizes the state of the particle filter.
     #
     # Displays the particle cloud, mean position and landmarks.
-    
+
     xs = []
     ys = []
 
@@ -24,10 +16,10 @@ def plot_state(particles, landmarks, map_limits):
         ys.append(particle['y'])
 
     # landmark positions
-    lx=[]
-    ly=[]
+    lx = []
+    ly = []
 
-    for i in range (len(landmarks)):
+    for i in range(len(landmarks)):
         lx.append(landmarks[i+1][0])
         ly.append(landmarks[i+1][1])
 
@@ -37,11 +29,15 @@ def plot_state(particles, landmarks, map_limits):
     # plot filter state
     plt.clf()
     plt.plot(xs, ys, 'r.')
-    plt.plot(lx, ly, 'bo',markersize=10)
-    plt.quiver(estimated_pose[0], estimated_pose[1], np.cos(estimated_pose[2]), np.sin(estimated_pose[2]), angles='xy',scale_units='xy')
+    plt.plot(lx, ly, 'bo', markersize=10)
+    plt.quiver(
+        estimated_pose[0], estimated_pose[1], np.cos(
+            estimated_pose[2]), np.sin(estimated_pose[2]),
+        angles='xy', scale_units='xy')
     plt.axis(map_limits)
 
     plt.pause(0.01)
+
 
 def initialize_particles(num_particles, map_limits):
     # randomly initialize the particles inside the map limits
@@ -61,20 +57,21 @@ def initialize_particles(num_particles, map_limits):
 
     return particles
 
+
 def mean_pose(particles):
     # calculate the mean pose of a particle set.
     #
     # for x and y, the mean position is the mean of the particle coordinates
     #
-    # for theta, we cannot simply average the angles because of the wraparound 
-    # (jump from -pi to pi). Therefore, we generate unit vectors from the 
-    # angles and calculate the angle of their average 
+    # for theta, we cannot simply average the angles because of the wraparound
+    # (jump from -pi to pi). Therefore, we generate unit vectors from the
+    # angles and calculate the angle of their average
 
     # save x and y coordinates of particles
     xs = []
     ys = []
 
-    # save unit vectors corresponding to particle orientations 
+    # save unit vectors corresponding to particle orientations
     vxs_theta = []
     vys_theta = []
 
@@ -82,20 +79,21 @@ def mean_pose(particles):
         xs.append(particle['x'])
         ys.append(particle['y'])
 
-        #make unit vector from particle orientation
+        # make unit vector from particle orientation
         vxs_theta.append(np.cos(particle['theta']))
         vys_theta.append(np.sin(particle['theta']))
 
-    #calculate average coordinates
+    # calculate average coordinates
     mean_x = np.mean(xs)
     mean_y = np.mean(ys)
     mean_theta = np.arctan2(np.mean(vys_theta), np.mean(vxs_theta))
 
     return [mean_x, mean_y, mean_theta]
 
+
 def sample_motion_model(odometry, particles):
     # Samples new particle positions, based on old positions, the odometry
-    # measurements and the motion noise 
+    # measurements and the motion noise
     # (probabilistic motion models slide 27)
 
     delta_rot1 = odometry['r1']
@@ -107,14 +105,12 @@ def sample_motion_model(odometry, particles):
 
     # generate new particle set after motion update
     new_particles = []
-    
+
     '''your code here'''
     '''***        ***'''
 
-
-
-
     return new_particles
+
 
 def eval_sensor_model(sensor_data, particles, landmarks):
     # Computes the observation likelihood of all particles, given the
@@ -125,24 +121,20 @@ def eval_sensor_model(sensor_data, particles, landmarks):
 
     sigma_r = 0.2
 
-    #measured landmark ids and ranges
+    # measured landmark ids and ranges
     ids = sensor_data['id']
     ranges = sensor_data['range']
 
-    weights = []
-    
+    weights = np.array([])
+
     '''your code here'''
     '''***        ***'''
-
-
-
-
-
-    #normalize weights
+    # normalize weights
     normalizer = sum(weights)
     weights = weights / normalizer
 
     return weights
+
 
 def resample_particles(particles, weights):
     # Returns a new set of particles obtained by performing
@@ -153,41 +145,4 @@ def resample_particles(particles, weights):
     '''your code here'''
     '''***        ***'''
 
-
-
-
-
     return new_particles
-
-def main():
-    # implementation of a particle filter for robot pose estimation
-
-    print "Reading landmark positions"
-    landmarks = read_world("../data/world.dat")
-
-    print "Reading sensor data"
-    sensor_readings = read_sensor_data("../data/sensor_data.dat")
-
-    #initialize the particles
-    map_limits = [-1, 12, 0, 10]
-    particles = initialize_particles(1000, map_limits)
-
-    #run particle filter
-    for timestep in range(len(sensor_readings)/2):
-
-        #plot the current state
-        plot_state(particles, landmarks, map_limits)
-
-        #predict particles by sampling from motion model with odometry info
-        new_particles = sample_motion_model(sensor_readings[timestep,'odometry'], particles)
-
-        #calculate importance weights according to sensor model
-        weights = eval_sensor_model(sensor_readings[timestep, 'sensor'], new_particles, landmarks)
-
-        #resample new particle set according to their importance weights
-        particles = resample_particles(new_particles, weights)
-
-    plt.show('hold')
-
-if __name__ == "__main__":
-    main()
