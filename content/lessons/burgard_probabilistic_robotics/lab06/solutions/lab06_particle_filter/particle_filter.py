@@ -108,6 +108,22 @@ def sample_motion_model(odometry, particles):
 
     '''your code here'''
     '''***        ***'''
+    for pt in particles:
+        rot1_sigma = (noise[0] * np.abs(delta_rot1)) + \
+            (noise[1] * delta_trans)
+        rot2_sigma = (noise[0] * np.abs(delta_rot2)) + \
+            (noise[1] * delta_trans)
+        trans_sigma = (noise[2] * delta_trans) + \
+            (noise[3] * (np.abs(delta_rot1) + np.abs(delta_rot2)))
+        dhat_rot1 = delta_rot1 + np.random.normal(0, rot1_sigma)
+        dhat_rot2 = delta_rot2 + np.random.normal(0, rot2_sigma)
+        dhat_trans = delta_trans + + np.random.normal(0, trans_sigma)
+
+        x = pt['x'] + (dhat_trans * np.cos(pt['theta'] + dhat_rot1))
+        y = pt['y'] + (dhat_trans * np.sin(pt['theta'] + dhat_rot1))
+        theta = pt['theta'] + dhat_rot1 + dhat_rot2
+
+        new_particles.append({'x': x, 'y': y, 'theta': theta})
 
     return new_particles
 
@@ -129,6 +145,26 @@ def eval_sensor_model(sensor_data, particles, landmarks):
 
     '''your code here'''
     '''***        ***'''
+    for count, pt in enumerate(particles):
+        w = 1.0
+
+        for idx in range(len(ids)):
+            landmark = landmarks[ids[idx]]
+            z = ranges[idx]
+            dist_to_landmark = np.sqrt(
+                ((pt['x']-landmark[0]) ** 2) +
+                ((pt['y']-landmark[1]) ** 2))
+
+            # Faster to just compute PDF manually
+            # p_z_given_x_l = scipy.stats.norm.pdf(
+            #    z - dist_to_landmark, scale=sigma_r)
+            loc = z - dist_to_landmark
+            p_z_given_x_l = (
+                np.exp(-0.5 * (loc**2))/np.sqrt(2.0*np.pi)) / sigma_r
+            w = w * p_z_given_x_l
+
+        weights = np.append(weights, w)
+
     # normalize weights
     normalizer = sum(weights)
     weights = weights / normalizer
@@ -144,5 +180,23 @@ def resample_particles(particles, weights):
 
     '''your code here'''
     '''***        ***'''
+    c = []
+    n = len(particles)
+    for i in range(n):
+        if i == 0:
+            c.append(weights[i])
+        else:
+            c.append(c[i-1] + weights[i])
+    assert(np.isclose(c[-1], 1.0))
+    c[-1] = 1.0
+
+    step = 1.0/float(n)
+    u = np.random.uniform() * step
+    i = 0
+    for j in range(n):
+        while u > c[i]:
+            i += 1
+        new_particles.append(particles[i])
+        u += step
 
     return new_particles
