@@ -13,8 +13,13 @@ RUN : "${USER_ID:?Build argument needs to be set and non-empty.}" && \
     : "${GROUP_ID:?Build argument needs to be set and non-empty.}"
 
 RUN apt-get update && \
+    apt-get install -y wget && \
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y locales curl gnupg2 lsb-release wget git sudo unzip && \
+    apt-get install -y locales curl gnupg2 lsb-release git sudo unzip && \
     locale-gen en_US en_US.UTF-8 && \
     update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 && \
     export LANG=en_US.UTF-8 && \
